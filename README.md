@@ -34,5 +34,6 @@ Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-play
     node tests/fuzz.js 6                   # 1,350 random games across every Wizard pair; must not crash or lose a card
     node tests/ladder.js hard normal 30    # CPU ladder: the first level should win more
     node tests/browser_check.js 1280 800   # plays every mode in a real browser (needs Playwright); also try 390 780
+    node tests/browser_ui.js               # drag-to-play, hover preview, Buy / Hack menus, side log
 
 Needs Python 3.9+ and Node 18+. Rebuilding the images needs Pillow and the four print sheets.

@@ -328,7 +328,7 @@ function* gemPhase(S, p) {
   if (isW(S, p, 'peebnup') && near(6)) o.push({act: 'peeb', label: 'Peebnup: both players ready a Gem, then you ready another'});
   if (has(S, p, 'transmog')) o.push({act: 'transmog', item: 'transmog', label: 'Transmogrifier: reshuffle it for 5 White Gems, then you may Hack'});
   o.push({act: 'pass', label: 'End Gem Phase'});
-  const c = yield* ask(S, p, 'gem', 'Gem Phase: choose one Gem Action', o, {show: 1});
+  const c = yield* ask(S, p, 'gem', 'Gem Phase: choose one Gem Action', o);   // with nothing but "End Gem Phase" on offer, the phase is skipped
   switch (c.act) {
     case 'tp': deplete(S, p, 1); yield* teleport(S, p, 2); break;
     case 'ready': ready(S, p, 1); break;

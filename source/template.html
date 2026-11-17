@@ -12,7 +12,7 @@
   --good:#7be06a; --bad:#ff5a5a; --move:#3fbf7a; --bump:#4d8dff; --tp:#ff5fc0;
   --disp:'Cormorant Garamond','Palatino Linotype',Palatino,Georgia,serif;
   --body:'Fira Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-  --card:clamp(64px,9.2vw,118px); --mini:clamp(38px,5.2vw,66px); --tok:clamp(22px,4.1vw,50px); --dw:calc(var(--tok)*2);
+  --card:clamp(84px,min(12vw,21vh),154px); --mini:clamp(38px,5.2vw,66px); --tok:clamp(22px,4.1vw,50px); --dw:calc(var(--tok)*2);
 }
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font:400 15px/1.4 var(--body);overflow:hidden;-webkit-tap-highlight-color:transparent}
@@ -46,7 +46,18 @@ h1,h2,h3{font-family:var(--disp);font-style:italic;font-weight:700;margin:0;text
 .info{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .info ul{margin:.3em 0 0;padding-left:1.1em} .info li{margin:.15em 0}
 /* game */
-#game{padding-block:6px;gap:4px;overflow-x:hidden;overflow-y:auto}
+#game{padding-block:6px;gap:10px;overflow:hidden;flex-direction:row}
+#main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px;overflow-x:hidden;overflow-y:auto}
+#logpane{display:none;flex:none;width:clamp(200px,20vw,290px);flex-direction:column;gap:6px;background:#0003;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-height:0}
+#logpane h4{margin:0;font:800 .68rem/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+#loglive{flex:1 1 auto;overflow-y:auto;min-height:0}
+@media (orientation:landscape) and (min-width:900px){#logpane{display:flex} #ticker{display:none} #mebar [data-a="log"]{display:none}}
+#wingrow{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 10px;font-size:.82rem;min-height:26px}
+#wingrow .wings{display:flex;gap:2px;align-items:center}
+#wingrow .wing{width:clamp(15px,2vw,24px);aspect-ratio:1;display:block}
+#wingrow .wing.off{filter:grayscale(1) brightness(.9);opacity:.5}
+#wingrow b{font-variant-numeric:tabular-nums}
+#wingrow.hot b.n{color:var(--bad)}
 .bar{display:flex;align-items:center;gap:8px;min-width:0;flex:none}
 .bar .face{width:clamp(34px,5vw,52px);aspect-ratio:1;border-radius:50%;border:3px solid var(--teal);flex:none;cursor:pointer;padding:0;background:none}
 .bar .face img{width:100%;height:100%;border-radius:50%;display:block}
@@ -57,7 +68,7 @@ h1,h2,h3{font-family:var(--disp);font-style:italic;font-weight:700;margin:0;text
 .wcount{display:flex;align-items:center;gap:2px;font-weight:800} .wcount img{height:clamp(16px,2.4vw,24px);width:auto}
 .items{display:flex;gap:3px;margin-left:auto;align-items:center;min-width:0}
 .cardb{padding:0;border:0;background:none;border-radius:6px;line-height:0;position:relative;flex:none}
-.cardb img{width:var(--mini);border-radius:6px;display:block;box-shadow:0 2px 6px #0008}
+.cardb img{width:var(--mini);border-radius:6px;display:block;box-shadow:0 2px 6px #0008;-webkit-user-drag:none;user-select:none}
 .cardb.sel img{outline:3px solid var(--gold);box-shadow:0 0 14px var(--gold)}
 .cardb .tag{position:absolute;right:-3px;top:-5px;background:var(--gold);color:#3b0c18;font:800 .72rem/1 var(--body);padding:3px 5px;border-radius:999px}
 .oppinfo{display:flex;gap:6px;align-items:center}
@@ -67,20 +78,26 @@ h1,h2,h3{font-family:var(--disp);font-style:italic;font-weight:700;margin:0;text
 #bridge{position:relative;aspect-ratio:1890/426;background-size:100% 100%;border-radius:8px;box-shadow:0 6px 18px #000a}
 .zone{position:absolute;top:0;bottom:0;width:23.81%;pointer-events:none;display:flex;align-items:flex-end;justify-content:center;font:800 clamp(.5rem,1.3vw,.8rem)/1 var(--body);letter-spacing:.12em;padding-bottom:2px;transition:left .9s}
 .zone.threat{background:linear-gradient(#ff000055,#ff000022);color:#fff;box-shadow:inset 0 0 0 2px #ff3b3b;text-shadow:0 1px 2px #000}
-.zone.exit{background:linear-gradient(#35ff8a22,#35ff8a11);color:#eafff0;box-shadow:inset 0 0 0 2px #46e58a;text-shadow:0 1px 2px #000}
+.zone.exit{color:#eafff0;text-shadow:0 1px 3px #000,0 0 6px #000}
 .tile{position:absolute;top:0;bottom:0;width:4.762%;border:0;background:none;padding:0}
 .tile.can{cursor:pointer;background:#ffffff26;box-shadow:inset 0 0 0 3px var(--gold);animation:pulse 1.1s infinite alternate}
 .tile.can:hover,.tile.can:focus-visible{background:#ffd86b80;outline:none}
 .tile .tl{pointer-events:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:800 clamp(.5rem,1.2vw,.75rem)/1.1 var(--body);background:#000b;color:var(--gold);padding:3px 5px;border-radius:6px;white-space:nowrap;z-index:5}
 @keyframes pulse{from{background:#ffffff14}to{background:#ffd86b55}}
+.tile.can.mv{background:#0a2a9c99;box-shadow:inset 0 0 0 3px #86b4ff;animation:pulseb 1.1s infinite alternate}
+.tile.can.mv:hover,.tile.can.mv:focus-visible{background:#2f6bffcc}
+@keyframes pulseb{from{background:#0a2a9c77}to{background:#1746d6b0}}
 .tok{position:absolute;width:var(--tok);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--teal);box-shadow:0 3px 8px #000c;transition:left .55s cubic-bezier(.3,1.4,.5,1),opacity .4s;pointer-events:none;z-index:3;background:#000}
 .tok img{width:100%;height:100%;border-radius:50%;display:block}
 .tok.opp{border-color:var(--orange)} .tok.me{top:73%} .tok.opp{top:27%}
 .tok.off{opacity:.25}
 .tok .you{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);font:800 .6rem/1 var(--body);background:var(--teal);color:#00201f;padding:1px 4px;border-radius:4px}
 .tok.opp .you{background:var(--orange);bottom:auto;top:-13px}
-#dragon{position:absolute;top:50%;width:var(--dw);aspect-ratio:1;border-radius:50%;transform:translateY(-50%);border:4px solid var(--bad);box-shadow:0 0 22px #ff3b3b99,0 4px 10px #000c;transition:left 1.1s cubic-bezier(.5,0,.3,1);z-index:4;background:none;padding:0;cursor:pointer}
-#dragon img{width:100%;height:100%;border-radius:50%;display:block}
+#dragon{position:absolute;top:50%;left:0;width:var(--dw);transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;transition:left 1.1s cubic-bezier(.5,0,.3,1),translate 1.1s cubic-bezier(.5,0,.3,1);z-index:4}
+#dragon.s1{left:100%;translate:-100% 0}
+#dragon .dface{width:100%;aspect-ratio:1;border-radius:50%;border:4px solid var(--bad);box-shadow:0 0 22px #ff3b3b99,0 4px 10px #000c;background:none;padding:0;cursor:pointer}
+#dragon .dface img{width:100%;height:100%;border-radius:50%;display:block}
+#dpower .cardb img{width:calc(var(--dw)*.74);box-shadow:0 0 0 2px var(--orange),0 2px 8px #000c}
 #table{flex:1 0 auto;display:flex;gap:10px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;padding-block:2px}
 .slot{display:flex;flex-direction:column;gap:3px;align-items:center;background:#0003;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
 .slot h4{margin:0;font:800 .68rem/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
@@ -95,7 +112,10 @@ h1,h2,h3{font-family:var(--disp);font-style:italic;font-weight:700;margin:0;text
 #ticker{font-size:.84rem;color:var(--dim);min-height:1.3em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #hand{flex:none;display:flex;gap:6px;justify-content:center;align-items:flex-end;min-height:calc(var(--card)*1.36)}
 #hand .cardb img{width:var(--card);border-radius:8px}
-#hand .cardb.can{transform:translateY(-6px)} #hand .cardb.can img{outline:3px solid var(--gold);box-shadow:0 0 16px #ffd86bcc}
+#hand .cardb.can{transform:translateY(-6px);touch-action:none;cursor:grab} #hand .cardb.can img{outline:3px solid var(--gold);box-shadow:0 0 16px #ffd86bcc}
+#hand .cardb.drag{z-index:30;cursor:grabbing} #hand .cardb.drag.drop img{outline-color:var(--good);box-shadow:0 0 22px #7be06acc}
+#hand.many .cardb{margin-left:calc(var(--card)*-.28)} #hand.many .cardb:first-child{margin-left:0}
+#peek{position:fixed;z-index:60;pointer-events:none;display:none} #peek img{width:min(300px,34vh);border-radius:14px;box-shadow:0 0 0 3px var(--gold2),0 16px 44px #000e;display:block}
 #hand .cardb.no img{filter:brightness(.6)}
 /* overlays */
 .ov{position:fixed;inset:0;background:#12030899;display:none;align-items:center;justify-content:center;z-index:50;padding:16px;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
@@ -123,10 +143,10 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
 .man img{width:100%;border-radius:8px;display:block;margin-bottom:8px}
 @media (max-width:640px){
   body{font-size:14px} #table{gap:5px} .slot{padding:3px 4px} .slot h4{font-size:.58rem;letter-spacing:.04em}
-  .bar .who span{display:none} #bridgewrap{padding-inline:0;padding-top:calc(var(--dw)*.8)} #dragon{top:0;transform:none} #bridge{aspect-ratio:1890/620}
-  :root{--card:21vw;--mini:10.2vw;--tok:6.2vw;--dw:11vw}
+  .bar .who span{display:none} #bridgewrap{padding-inline:0;padding-top:calc(var(--dw)*1.05)} #dragon{top:0;transform:none;flex-direction:row;width:auto} #dragon.s1{flex-direction:row-reverse} #dragon .dface{width:var(--dw)} #dpower .cardb img{width:calc(var(--dw)*.7)} #bridge{aspect-ratio:1890/620}
+  :root{--card:22.5vw;--mini:10.2vw;--tok:6.2vw;--dw:11vw} #hand{gap:3px}
 }
-@media (max-height:560px){:root{--card:clamp(56px,15vh,100px);--mini:clamp(30px,8.5vh,56px)} #prompt{min-height:40px}}
+@media (max-height:560px){:root{--card:clamp(64px,19vh,120px);--mini:clamp(30px,8.5vh,56px)} #prompt{min-height:40px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -148,17 +168,22 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
   </section>
   <section class="screen" id="setup" hidden><div class="wrap" id="setupbody"></div></section>
   <section class="screen" id="game" hidden>
-    <div class="bar opp" id="oppbar"></div>
-    <div id="bridgewrap"><div id="bridge"></div><button id="dragon" data-a="zoomdragon" aria-label="The Dragon"><img alt=""></button></div>
-    <div id="table"></div>
-    <div id="prompt"><div id="ticker" aria-live="polite"></div><div class="q" id="q"></div><div class="opts" id="opts"></div></div>
-    <div id="hand"></div>
-    <div class="bar me" id="mebar"></div>
+    <div id="main">
+      <div class="bar opp" id="oppbar"></div>
+      <div id="wingrow"></div>
+      <div id="bridgewrap"><div id="bridge"></div><div id="dragon"><button class="dface" data-a="zoomdragon" data-peek="dragon" aria-label="The Dragon"><img alt=""></button><span id="dpower"></span></div></div>
+      <div id="table"></div>
+      <div id="prompt"><div id="ticker" aria-live="polite"></div><div class="q" id="q"></div><div class="opts" id="opts"></div></div>
+      <div id="hand"></div>
+      <div class="bar me" id="mebar"></div>
+    </div>
+    <aside id="logpane" aria-label="Match log"><h4>Match log</h4><div class="log" id="loglive"></div></aside>
   </section>
 </div>
 <div id="splash" aria-hidden="true"><img alt=""><b></b></div>
 <div id="banner" aria-hidden="true"></div>
 <div id="coach" hidden></div>
+<div id="peek" aria-hidden="true"><img alt=""></div>
 <div class="ov" id="ov" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
 
 <script>
@@ -215,12 +240,12 @@ function startMatch(cfg) {
   let G;
   if (cfg.puzzle) { G = Game.resume(cfg.puzzle.snap, [], []); }
   else { const S = newState({wiz: cfg.wiz, seed: cfg.seed, first: cfg.first, names: namesFor(cfg.wiz)}); G = new Game(S); }
-  M = {G, cfg, busy: false, fresh: true};
+  M = {G, cfg, busy: false, fresh: true, id: Date.now()};
   $('#ticker').textContent = cfg.puzzle ? 'Find the forced win.' : ''; show('game'); closeOv(); saveMatch(); render(); pump();
 }
 function saveMatch() { if (!M || M.G.over || M.cfg.puzzle) return; store.set('db_save', JSON.stringify({snap: M.G.snap, decs: M.G.decs, cfg: M.cfg})); }
 function resumeMatch() {
-  try { const j = JSON.parse(store.get('db_save')); const G = Game.resume(j.snap, j.decs, []); M = {G, cfg: j.cfg, busy: false, fresh: true}; $('#ticker').textContent = ''; show('game'); render(); pump(); }
+  try { const j = JSON.parse(store.get('db_save')); const G = Game.resume(j.snap, j.decs, []); M = {G, cfg: j.cfg, busy: false, fresh: true, id: Date.now()}; $('#ticker').textContent = ''; show('game'); render(); pump(); }
   catch (e) { store.del('db_save'); toTitle(); }
 }
 const speed = () => M && M.cfg.fast ? 0 : (P.opt.speed ?? 1);
@@ -236,7 +261,7 @@ function pump() {
 }
 function answer(i) {
   const G = M.G, S = G.S, n0 = S.log.length, pos0 = S.pos.slice(), fl0 = S.flights;
-  $('#coach').hidden = true;
+  $('#coach').hidden = true; M.sub = null;
   G.answer(i);
   const fresh = S.log.slice(n0);
   let wait = 0;
@@ -265,10 +290,10 @@ function gemsHtml(S, p) {
   return h;
 }
 function barHtml(S, p) {
-  const w = S.wiz[p], it = S.items[p].map(i => `<button class="cardb" data-a="zoomitem" data-id="${i}" aria-label="${esc(ITEMS[i].n)}"><img src="${im('it_' + i)}" alt=""></button>`).join('');
+  const w = S.wiz[p], it = S.items[p].map(i => `<button class="cardb" data-a="zoomitem" data-id="${i}" data-peek="it_${i}" aria-label="${esc(ITEMS[i].n)}"><img src="${im('it_' + i)}" alt=""></button>`).join('');
   const hd = S.hackDown[p].length ? `<span class="lbl">${S.hackDown[p].length} Hack${S.hackDown[p].length > 1 ? 's' : ''} face down</span>` : '';
-  const hand = p === HUMAN ? '' : M.cfg.puzzle ? S.hand[p].map(c => `<button class="cardb" data-a="zoomcard" data-id="${c}"><img src="${im(c)}" alt="${esc(ACTIONS[c].n)}"></button>`).join('') : `<span class="backs" title="${S.hand[p].length} cards in hand">${S.hand[p].map(() => `<img src="${im('back')}" alt="">`).join('')}</span>`;
-  return `<button class="face" data-a="zoomwiz" data-id="${w}" aria-label="${esc(WIZ[w].n)}: read powers"><img src="${face(w)}" alt=""></button>
+  const hand = p === HUMAN ? '' : M.cfg.puzzle ? S.hand[p].map(c => `<button class="cardb" data-a="zoomcard" data-id="${c}" data-peek="${c}"><img src="${im(c)}" alt="${esc(ACTIONS[c].n)}"></button>`).join('') : `<span class="backs" title="${S.hand[p].length} cards in hand">${S.hand[p].map(() => `<img src="${im('back')}" alt="">`).join('')}</span>`;
+  return `<button class="face" data-a="zoomwiz" data-id="${w}" data-peek="wz_${w}" aria-label="${esc(WIZ[w].n)}: read powers"><img src="${face(w)}" alt=""></button>
     <div class="who"><b>${p === HUMAN ? 'You · ' : ''}${esc(WIZ[w].n)}</b><span class="lbl">${p === HUMAN ? esc(WIZ[w].title) : (M.cfg.oppName ? esc(M.cfg.oppName) + ' · ' : '') + (M.cfg.puzzle ? 'Puzzle opponent' : 'CPU · ' + LEVEL_NAMES[M.cfg.level])}</span></div>
     ${gemsHtml(S, p)}${hd}<div class="oppinfo">${hand}</div><div class="items">${it}</div>
     ${p === HUMAN ? `<button class="iconbtn" data-a="tip" id="tipbtn" ${M.cfg.tips ? '' : 'hidden'}>Tip</button><button class="iconbtn" data-a="log">Log</button><button class="iconbtn" data-a="menu">Menu</button>` : ''}`;
@@ -285,18 +310,22 @@ function render() {
       if (o.tile != null && q.kind !== 'dir') tiles[o.tile] = {i, label: o.label === 'Stay' ? 'Stay' : ''};
       else if (q.kind === 'dir') { tiles[o.tile] = {i, label: o.label}; btns.push({i, label: (o.dir < 0 ? '← ' : '') + o.label + (o.dir > 0 ? ' →' : '')}); }
       else if (o.card && o.zone === 'hand') { let k = -1; S.hand[HUMAN].forEach((c, j) => { if (k < 0 && c === o.card && !used[j]) k = j; }); if (k >= 0) { used[k] = 1; handPick[k] = i; } else strip.push({i, o}); }
-      else if (o.card || o.item || o.hack) { strip.push({i, o}); if (q.kind === 'gem') btns.push({i, label: o.label}); }
+      else if (o.card || o.item || o.hack) {
+        strip.push({i, o});
+        if (q.kind === 'gem') { const g = o.act === 'buy' ? 'buy' : o.act === 'hack' ? 'hack' : null; if (!g) btns.push({i, label: o.label}); else if (!btns.some(x => x.sub === g)) btns.push({sub: g, label: g === 'buy' ? `Buy an Item (${itemCost(S)} Gems)…` : 'Use a Bridge Hack…'}); }
+      }
       else btns.push({i, label: o.label});
     });
   }
+  hidePeek();
   // bridge
   let b = '';
   const dz = S.dragon === 0 ? 0 : 76.19;
   b += `<div class="zone threat" style="left:${dz}%">THREATENED</div><div class="zone exit" style="left:${76.19 - dz}%">EXIT</div>`;
-  for (let t = 0; t <= LAST; t++) { const c = tiles[t]; b += `<button class="tile${c ? ' can' : ''}" style="left:${t * 4.762}%" ${c ? `data-a="ans" data-i="${c.i}"` : 'tabindex="-1" disabled'} aria-label="${esc(tileName(t))}">${c && c.label ? `<span class="tl">${esc(c.label)}</span>` : ''}</button>`; }
+  for (let t = 0; t <= LAST; t++) { const c = tiles[t]; b += `<button class="tile${c ? ' can' + (q.kind === 'tile' ? ' mv' : '') : ''}" style="left:${t * 4.762}%" ${c ? `data-a="ans" data-i="${c.i}"` : 'tabindex="-1" disabled'} aria-label="${esc(tileName(t))}">${c && c.label ? `<span class="tl">${esc(c.label)}</span>` : ''}</button>`; }
   for (const p of [1, 0]) b += `<div class="tok ${p ? 'opp' : 'me'}${S.away[p] ? ' off' : ''}" style="left:${(S.pos[p] + .5) * 4.762}%"><img src="${face(S.wiz[p])}" alt=""><span class="you">${p ? 'CPU' : 'YOU'}</span></div>`;
   const br = $('#bridge');
-  if (!br.dataset.init) { br.style.backgroundImage = `url(${im('bridge')})`; br.dataset.init = 1; $('#dragon img').src = face('dragon'); }
+  if (!br.dataset.init) { br.style.backgroundImage = `url(${im('bridge')})`; br.dataset.init = 1; $('#dragon .dface img').src = face('dragon'); }
   // keep token elements alive so they animate between tiles
   const old = br.querySelectorAll('.tok');
   if (old.length === 2 && br.dataset.w === S.wiz.join()) { const keep = [...old]; br.querySelectorAll(':scope > :not(.tok)').forEach(e => e.remove()); const tmp = document.createElement('div'); tmp.innerHTML = b; [...tmp.children].forEach(e => { if (!e.classList.contains('tok')) br.insertBefore(e, keep[0]); }); [1, 0].forEach((p, k) => { keep[k].style.left = (S.pos[p] + .5) * 4.762 + '%'; keep[k].classList.toggle('off', !!S.away[p]); keep[k].querySelector('img').src = face(S.wiz[p]); }); }
@@ -307,32 +336,72 @@ function render() {
     setTimeout(() => { dg.style.pointerEvents = ''; dg.style.transition = ''; }, jump ? 50 : 1200);
   }
   M.fresh = false;
-  dg.style.left = S.dragon === 0 ? '0' : 'calc(100% - var(--dw))';
+  dg.classList.toggle('s1', S.dragon === 1);
   // table
   const w = wings(S), need = flightNeed(S);
-  const cardB = (kind, id, extra = '') => `<button class="cardb" data-a="zoom${kind}" data-id="${id}" ${extra} aria-label="${esc((kind === 'item' ? ITEMS : kind === 'hack' ? HACKS : ACTIONS)[id].n)}"><img src="${cardImg(kind, id)}" alt=""></button>`;
+  const cardB = (kind, id, extra = '') => `<button class="cardb" data-a="zoom${kind}" data-id="${id}" data-peek="${kind === 'item' ? 'it_' : kind === 'hack' ? 'hk_' : ''}${id}" ${extra} aria-label="${esc((kind === 'item' ? ITEMS : kind === 'hack' ? HACKS : ACTIONS)[id].n)}"><img src="${cardImg(kind, id)}" alt=""></button>`;
   const opt = (pred) => { const s = strip.find(x => pred(x.o)); return s ? `data-ci="${s.i}"` : ''; };
+  $('#dpower').innerHTML = S.power ? cardB('card', S.power) : '';
+  let wr = '<span class="wings" role="img" aria-label="' + w + ' of ' + need + ' Wings">';
+  for (let k = 0; k < Math.max(need, w); k++) wr += `<img class="wing${k < w ? '' : ' off'}" src="${im('icon_wing')}" alt="">`;
+  const wre = $('#wingrow'); wre.className = w >= need - 2 ? 'hot' : '';
+  wre.innerHTML = wr + `</span><span><b class="n">${w}/${need}</b> Wings to Flight</span>` + (S.power ? `<span class="lbl">Dragon Power: <b>${esc(ACTIONS[S.power].n)}</b>${ACTIONS[S.power].pw ? ' · ' + esc(ACTIONS[S.power].pw) : ' (no effect)'}</span>` : '');
   $('#table').innerHTML = `
-    <div class="slot"><h4>Deck</h4><div class="cards"><span class="cardb"><img src="${im('back')}" alt=""><span class="tag">${S.deck.length}</span></span></div></div>
     <div class="slot nest"><h4>Dragon Nest</h4><div class="cards">${S.nest.map(c => cardB('card', c, opt(o => o.zone === 'nest' && o.card === c))).join('') || '<div class="empty">empty</div>'}</div>
-      <div class="meter ${S.nest.length >= 6 || w >= need - 2 ? 'hot' : ''}">${S.nest.length}/7 cards · ${w}/${need} Wings</div></div>
-    <div class="slot"><h4>Dragon Power</h4><div class="cards">${S.power ? cardB('card', S.power) : '<div class="empty">none</div>'}</div><div class="meter" style="max-width:9.5em;white-space:normal;font-weight:600;font-size:.7rem;text-align:center">${S.power ? esc(ACTIONS[S.power].pw || 'No power') : ''}</div></div>
+      <div class="meter"><span class="${S.nest.length >= 6 ? 'hot' : ''}" style="${S.nest.length >= 6 ? 'color:var(--bad)' : ''}">${S.nest.length}/7 cards to Roost</span> <span class="lbl" title="Cards left in the Action Deck">· Deck ${S.deck.length}</span></div></div>
     <div class="slot"><h4>Item Market · ${itemCost(S)} Gems</h4><div class="cards">${S.market.map(i => cardB('item', i, opt(o => o.item === i))).join('') || '<div class="empty">empty</div>'}</div></div>
     <div class="slot"><h4>Bridge Hacks</h4><div class="cards">${S.hacks.map(h => cardB('hack', h, opt(o => o.hack === h))).join('')}</div><div class="meter wcount"><img src="${im('icon_white')}" alt="">${S.supply} in supply</div></div>`;
   for (const e of document.querySelectorAll('#table [data-ci]')) e.classList.add('sel');
   // hand
-  $('#hand').innerHTML = S.hand[HUMAN].map((c, j) => `<button class="cardb ${handPick[j] != null ? 'can' : q ? 'no' : ''}" data-a="hand" data-id="${c}" ${handPick[j] != null ? `data-ci="${handPick[j]}"` : ''} aria-label="${esc(ACTIONS[c].n)}"><img src="${im(c)}" alt=""></button>`).join('');
+  $('#hand').classList.toggle('many', S.hand[HUMAN].length > 4);
+  $('#hand').innerHTML = S.hand[HUMAN].map((c, j) => `<button class="cardb ${handPick[j] != null ? 'can' : q ? 'no' : ''}" data-a="hand" data-id="${c}" data-peek="${c}" ${handPick[j] != null ? `data-ci="${handPick[j]}"` : ''} aria-label="${esc(ACTIONS[c].n)}"><img src="${im(c)}" alt=""></button>`).join('');
   // prompt
+  const lg = $('#loglive'); if (lg.dataset.n !== String(S.log.length) || lg.dataset.g !== String(M.id)) { lg.innerHTML = logHtml(S.log); lg.dataset.n = S.log.length; lg.dataset.g = M.id; lg.scrollTop = lg.scrollHeight; }
   const qe = $('#q'), oe = $('#opts');
   if (G.over) { qe.textContent = ''; oe.innerHTML = ''; return; }
   if (!q) { qe.className = 'q cpu'; qe.textContent = G.req && G.req.p !== HUMAN ? `${nm(S, 1)} is thinking…` : '…'; oe.innerHTML = ''; return; }
   qe.className = 'q'; qe.textContent = q.prompt;
+  const stripBtn = s => `<button class="cardb sel" data-a="strip" data-ci="${s.i}" data-peek="${s.o.item ? 'it_' + s.o.item : s.o.hack ? 'hk_' + s.o.hack : s.o.card}" aria-label="${esc(s.o.label)}"><img src="${cardImg(s.o.item ? 'item' : s.o.hack ? 'hack' : 'card', s.o.card || s.o.item || s.o.hack)}" alt=""></button>`;
   let h = '';
-  if (q.kind !== 'gem') for (const s of strip) if (!(s.o.zone === 'nest') && !(s.o.item && S.market.includes(s.o.item)) && !(s.o.hack && S.hacks.includes(s.o.hack))) h += `<button class="cardb sel" data-a="strip" data-ci="${s.i}" aria-label="${esc(s.o.label)}"><img src="${cardImg(s.o.item ? 'item' : s.o.hack ? 'hack' : 'card', s.o.card || s.o.item || s.o.hack)}" alt=""></button>`;
-  for (const x of btns) h += `<button class="btn ${btns.length <= 3 && x === btns[0] && q.kind !== 'gem' ? 'pri' : ''}" data-a="ans" data-i="${x.i}">${esc(x.label)}</button>`;
+  if (q.kind === 'gem' && M.sub) {   // the Buy / Hack sub-menu
+    qe.textContent = M.sub === 'buy' ? `Buy which Item? (${itemCost(S)} ready Gems)` : 'Use which Bridge Hack?';
+    h = strip.filter(s => s.o.act === M.sub).map(stripBtn).join('') + '<button class="btn" data-a="sub" data-v="">← Back</button>';
+  } else {
+    if (q.kind !== 'gem') for (const s of strip) if (!(s.o.zone === 'nest') && !(s.o.item && S.market.includes(s.o.item)) && !(s.o.hack && S.hacks.includes(s.o.hack))) h += stripBtn(s);
+    for (const x of btns) h += x.sub ? `<button class="btn" data-a="sub" data-v="${x.sub}">${esc(x.label)}</button>` : `<button class="btn ${btns.length <= 3 && x === btns[0] && q.kind !== 'gem' ? 'pri' : ''}" data-a="ans" data-i="${x.i}">${esc(x.label)}</button>`;
+    if (q.kind !== 'gem' && strip.some(s => s.o.zone === 'nest')) qe.textContent += ' (click a highlighted card)';
+    if (q.kind === 'card' && q.main) qe.textContent += ' — drag it up, or click it';
+  }
   oe.innerHTML = h;
-  if (q.kind !== 'gem' && strip.some(s => s.o.zone === 'nest')) qe.textContent += ' (tap a highlighted card)';
 }
+function logHtml(L) { let h = ''; for (const e of L) h += /^—/.test(e.m) ? `<div class="t">${esc(e.m.replace(/—/g, '').trim())}</div>` : `<div>${esc(e.m)}</div>`; return h; }
+/* hover preview (mouse only) */
+function hidePeek() { $('#peek').style.display = 'none'; }
+document.addEventListener('mouseover', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-peek]'); if (!b || drag && drag.on || !matchMedia('(hover:hover)').matches) return;
+  const pk = $('#peek'), r = b.getBoundingClientRect(); pk.querySelector('img').src = im(b.dataset.peek); pk.style.display = 'block';
+  const pw = pk.offsetWidth, ph = pw * 600 / 440, vw = innerWidth, vh = innerHeight;
+  let x = r.left + r.width / 2 - pw / 2, y = r.top - ph - 10;
+  if (y < 6) { y = Math.min(vh - ph - 6, Math.max(6, r.top + r.height / 2 - ph / 2)); x = r.right + 12; if (x + pw > vw - 6) x = r.left - pw - 12; }
+  pk.style.left = Math.max(6, Math.min(vw - pw - 6, x)) + 'px'; pk.style.top = Math.max(6, y) + 'px';
+});
+document.addEventListener('mouseout', ev => { const b = ev.target.closest && ev.target.closest('[data-peek]'); if (b && !(ev.relatedTarget && b.contains(ev.relatedTarget))) hidePeek(); });
+/* drag a hand card up, above the hand, to play it */
+let drag = null, dragAt = 0;
+document.addEventListener('pointerdown', ev => { const b = ev.target.closest && ev.target.closest('#hand .cardb.can[data-ci]'); if (b && M && !M.busy) drag = {b, x: ev.clientX, y: ev.clientY, id: ev.pointerId, ci: +b.dataset.ci, on: false}; });
+document.addEventListener('pointermove', ev => {
+  if (!drag || ev.pointerId !== drag.id) return;
+  const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+  if (!drag.on && Math.hypot(dx, dy) > 10) { drag.on = true; hidePeek(); drag.b.classList.add('drag'); try { drag.b.setPointerCapture(drag.id); } catch (e) {} }
+  if (drag.on) { drag.b.style.transform = `translate(${dx}px,${dy}px) scale(1.06)`; drag.b.classList.toggle('drop', ev.clientY < $('#hand').getBoundingClientRect().top); }
+});
+function dragEnd(ev) {
+  if (!drag || ev.pointerId !== drag.id) return;
+  const d = drag; drag = null; if (!d.on) return;
+  dragAt = Date.now(); d.b.classList.remove('drag', 'drop'); d.b.style.transform = '';
+  if (ev.type === 'pointerup' && ev.clientY < $('#hand').getBoundingClientRect().top && M && !M.busy && M.G.req && M.G.req.p === HUMAN) answer(d.ci);
+}
+document.addEventListener('pointerup', dragEnd); document.addEventListener('pointercancel', dragEnd);
 function chooseCard(i) {   // a card-shaped option: zoom first so its text can be read, unless one-tap is on
   const o = M.G.req.opts[i], kind = o.item ? 'item' : o.hack ? 'hack' : 'card', id = o.card || o.item || o.hack;
   if (P.opt.oneTap) return answer(i);
@@ -350,7 +419,7 @@ const COACH = {
   card: 'This is your <b>Action Phase</b>. Tap a card to read it, then play it. <b>MOVE</b> walks you up to that many tiles, <b>BUMP</b> shoves your opponent exactly that far, and <b>TELEPORT</b> is a move that can never win the game by itself.',
   tile: 'Tap a glowing tile. The red end is <b>Threatened</b> by the Dragon: finish your Gem Phase there and you’re pounced. The green end is the <b>Exit</b>: start a MOVE while standing on it and you escape.',
   dir: 'A Bump goes one way for its full distance. Shove your opponent toward the Dragon, or away from the Exit.',
-  gem: 'Now the <b>Gem Phase</b>: one Gem Action. Flip a ready Green Gem to Teleport 2, ready a Gem if you stand on a Gem tile (tiles 5 and 8), spend 3 ready Gems on an Item, or pay White Gems for a Bridge Hack. White Gems come from Bumping.',
+  gem: 'Now the <b>Gem Phase</b>: one Gem Action. Flip a ready Green Gem to Teleport 2, ready a Gem if you stand on a Gem tile (tiles 5 and 8), spend 3 ready Gems on an Item, or pay White Gems for a Bridge Hack (you can also click those cards on the table). White Gems come from Bumping. If you have no Gem Action available, this phase is skipped.',
   nest: 'Played cards go to the <b>Dragon Nest</b>. At 9 Wings the Dragon takes <b>Flight</b> to the other end and the last card played becomes its power. At 7 cards without a Flight the Nest is reshuffled (a <b>Roost</b>).',
 };
 function coachFor(q) {
@@ -508,8 +577,7 @@ function optionsSheet() {
 }
 function rulebookSheet() { let h = '<div class="row"><h2>Rulebook</h2><button class="btn sm" data-a="close">Close</button></div><div class="man">'; for (let i = 1; i <= MANUAL_PAGES; i++) h += `<img loading="lazy" src="${im('manual_' + String(i).padStart(2, '0'))}" alt="Rulebook page ${i}">`; openOv(h + '</div><div class="acts"><button class="btn" data-a="close">Close</button></div>'); }
 function logSheet() {
-  const L = M.G.S.log; let h = '';
-  for (const e of L) h += /^—/.test(e.m) ? `<div class="t">${esc(e.m.replace(/—/g, '').trim())}</div>` : `<div>${esc(e.m)}</div>`;
+  const h = logHtml(M.G.S.log);
   openOv(`<div class="row"><h2>Match log</h2><button class="btn sm" data-a="close">Close</button></div><div class="log">${h}</div>`); const s = $('#sheet'); s.scrollTop = s.scrollHeight;
 }
 function menuSheet() {
@@ -520,14 +588,17 @@ function toTitle() { M = null; closeOv(); $('#contbtn').hidden = !store.get('db_
 
 /* ---------- input ---------- */
 document.addEventListener('click', ev => {
+  if (Date.now() - dragAt < 350) return;   // the click that ends a drag
   const b = ev.target.closest('[data-a]'); if (!b) { if (ev.target.id === 'ov') closeOv(); return; }
+  hidePeek();
   const a = b.dataset.a, v = b.dataset.v, id = b.dataset.id;
   if (a === 'ans') { if (M && !M.busy) answer(+b.dataset.i); return; }
   if (b.dataset.ci != null && M && !M.busy && M.G.req && M.G.req.p === HUMAN) return chooseCard(+b.dataset.ci);
   switch (a) {
     case 'close': closeOv(); break;
+    case 'sub': if (M) { M.sub = v || null; render(); } break;
     case 'zoomok': { const f = zoomCb; closeOv(); if (f) f(); break; }
-    case 'hand': case 'zoomcard': zoomThing('card', id); break;
+    case 'hand': case 'zoomcard': zoomThing(id in ACTIONS ? 'card' : 'card', id); break;
     case 'zoomitem': zoomThing('item', id); break;
     case 'zoomhack': zoomThing('hack', id); break;
     case 'zoomwiz': zoomThing('wiz', id); break;

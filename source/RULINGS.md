@@ -7,6 +7,7 @@ Where a card or the manual leaves room, the game does the following. Change any 
 - First player is chosen at random (the manual's Wing-draw gives the same odds).
 - Wizards do not block each other and may share a tile.
 - You must play an Action card if you have one. The Gem Action is optional.
+- If no Gem Action is available to you, the Gem Phase is skipped without asking.
 - A MOVE started while standing on an Exit tile wins at once, even a MOVE of 0. Teleports never win.
 - Pounce is checked right after the Gem Phase, before the Dragon Check.
 - On a Flight the last card put into the Nest becomes the Dragon Power.

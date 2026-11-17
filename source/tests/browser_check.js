@@ -31,7 +31,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
   // versus + save/resume
   await p.evaluate(() => toTitle()); await p.click('#title [data-a="play"]'); await fast(); await overflow('setup');
   await p.click('[data-a="setmode"][data-v="versus"]'); await p.click('[data-a="launch"]'); await p.waitForTimeout(300); await shot('match'); await overflow('match');
-  for (let i = 0; i < 6; i++) { const sel = '#bridge .tile.can, #hand [data-ci], #opts [data-a="ans"]'; await p.waitForFunction(() => M && !M.busy && M.G.req && M.G.req.p === 0 || M.G.over); if (await p.evaluate(() => M.G.over)) break; await p.locator(sel).first().click({force: true}); }
+  for (let i = 0; i < 6; i++) { const sel = '#bridge .tile.can, #hand [data-ci], #opts [data-a="ans"], #opts [data-ci], #table [data-ci]'; await p.waitForFunction(() => M && !M.busy && M.G.req && M.G.req.p === 0 || M.G.over); if (await p.evaluate(() => M.G.over)) break; await p.locator(sel).first().click({force: true}); }
   await p.waitForFunction(() => M.G.over || !M.busy && M.G.req && M.G.req.p === 0);
   const before = await p.evaluate(() => JSON.stringify([M.G.S.turn, M.G.S.pos, M.G.S.hand, M.G.S.nest]));
   if (!(await p.evaluate(() => M.G.over))) {

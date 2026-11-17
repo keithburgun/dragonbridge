@@ -52,6 +52,12 @@ def icon(k, box, size, name):   # a soft-edged cut-out of the gem artwork
 icon('b_41', (252, 236, 568, 644), (78, 100), 'icon_gem')
 icon('bb_41', (252, 236, 568, 644), (78, 100), 'icon_gemdep')
 icon('e_31', (180, 350, 644, 726), (112, 90), 'icon_white')
+def round_icon(k, box, size, name):
+    from PIL import ImageDraw
+    im = cell(k).crop(box).resize((size * 3, size * 3), Image.LANCZOS).convert('RGBA')
+    m = Image.new('L', im.size, 0); ImageDraw.Draw(m).ellipse((2, 2, im.width - 3, im.height - 3), fill=255)
+    im.putalpha(m); im.resize((size, size), Image.LANCZOS).save(os.path.join(OUT, name + '.webp'), 'WEBP', quality=92, method=6)
+round_icon('b_02', (378, 907, 428, 957), 64, 'icon_wing')   # the Wing symbol from Flame Arrow's Dragon Power text
 logo = cell('bb_00').crop((132, 290, 692, 850)); save(logo.resize((360, 360), Image.LANCZOS), 'logo', 85)
 center = cell('b_25').rotate(90, expand=True).crop((490, 250, 640, 580)); save(center.rotate(-90, expand=True), 'wordmark', 88)
 
