@@ -1,0 +1,575 @@
+<title>Dragon Bridge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,700&family=Fira+Sans:wght@400;600;800&display=swap">
+<style>
+/* Layout: one screen. Opponent strip on top, the bridge lying sideways across the middle with face tokens on it,
+   the table (deck, Nest, Dragon Power, Market, Hacks) under it, then the prompt and your hand at the bottom. */
+:root{
+  color-scheme:dark;
+  --bg:#2a0710; --bg2:#3b0c18; --panel:#4a1220; --panel2:#5d1a2b; --line:#7c2c3f;
+  --fg:#fff3df; --dim:#e0b9a8; --gold:#ffd86b; --gold2:#f0a93a; --teal:#35c6c0; --orange:#ff7a2f;
+  --good:#7be06a; --bad:#ff5a5a; --move:#3fbf7a; --bump:#4d8dff; --tp:#ff5fc0;
+  --disp:'Cormorant Garamond','Palatino Linotype',Palatino,Georgia,serif;
+  --body:'Fira Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --card:clamp(64px,9.2vw,118px); --mini:clamp(38px,5.2vw,66px); --tok:clamp(22px,4.1vw,50px); --dw:calc(var(--tok)*2);
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:400 15px/1.4 var(--body);overflow:hidden;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+h1,h2,h3{font-family:var(--disp);font-style:italic;font-weight:700;margin:0;text-wrap:balance;color:var(--gold)}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow:auto;
+  background:radial-gradient(120% 80% at 50% 0%,var(--bg2),var(--bg) 70%)}
+#app{position:relative;height:100%}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:.55em 1.2em;font-weight:600}
+.btn:hover{border-color:var(--gold2)} .btn:focus-visible,.tbtn:focus-visible,.pick:focus-visible,.cardb:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn.pri{background:linear-gradient(#ffd86b,#f0a93a);color:#3b0c18;border-color:#fff0b8}
+.btn.sm{padding:.3em .8em;font-size:.86rem}
+.btn[aria-pressed="true"]{background:var(--gold);color:#3b0c18;border-color:#fff0b8}
+.lbl{color:var(--dim);font-size:.85rem}
+/* title */
+#title{align-items:center;justify-content:center;gap:14px;text-align:center}
+#title .logo{width:min(46vw,210px);aspect-ratio:1;border-radius:50%;box-shadow:0 0 0 4px var(--gold2),0 12px 40px #0009}
+#title h1{font-size:clamp(2.6rem,9vw,4.6rem);line-height:.95;text-shadow:0 3px 0 #7a2a12,0 8px 24px #000a}
+.tmenu{display:flex;flex-direction:column;gap:8px;width:min(100%,300px)}
+.tbtn{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.7em;font-weight:600;font-size:1.05rem}
+.tbtn:hover{background:var(--panel2);border-color:var(--gold2)} .tbtn.pri{background:linear-gradient(#ffd86b,#f0a93a);color:#3b0c18;border-color:#fff0b8}
+/* setup */
+.wrap{width:min(100%,900px);margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pick{display:flex;gap:10px;align-items:center;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:6px 8px;min-width:0}
+.pick[aria-pressed="true"]{border-color:var(--gold);background:var(--panel2)}
+.pick img{width:42px;height:42px;border-radius:50%;flex:none}
+.pick b{display:block;line-height:1.1} .pick span{font-size:.75rem;color:var(--dim)}
+.info{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.info ul{margin:.3em 0 0;padding-left:1.1em} .info li{margin:.15em 0}
+/* game */
+#game{padding-block:6px;gap:4px;overflow-x:hidden;overflow-y:auto}
+.bar{display:flex;align-items:center;gap:8px;min-width:0;flex:none}
+.bar .face{width:clamp(34px,5vw,52px);aspect-ratio:1;border-radius:50%;border:3px solid var(--teal);flex:none;cursor:pointer;padding:0;background:none}
+.bar .face img{width:100%;height:100%;border-radius:50%;display:block}
+.bar.opp .face{border-color:var(--orange)}
+.bar .who{min-width:0;line-height:1.15} .bar .who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gems{display:flex;gap:2px;align-items:center}
+.gems img{height:clamp(20px,3vw,30px);width:auto}
+.wcount{display:flex;align-items:center;gap:2px;font-weight:800} .wcount img{height:clamp(16px,2.4vw,24px);width:auto}
+.items{display:flex;gap:3px;margin-left:auto;align-items:center;min-width:0}
+.cardb{padding:0;border:0;background:none;border-radius:6px;line-height:0;position:relative;flex:none}
+.cardb img{width:var(--mini);border-radius:6px;display:block;box-shadow:0 2px 6px #0008}
+.cardb.sel img{outline:3px solid var(--gold);box-shadow:0 0 14px var(--gold)}
+.cardb .tag{position:absolute;right:-3px;top:-5px;background:var(--gold);color:#3b0c18;font:800 .72rem/1 var(--body);padding:3px 5px;border-radius:999px}
+.oppinfo{display:flex;gap:6px;align-items:center}
+.backs{display:flex} .backs img{width:calc(var(--mini)*.55);border-radius:4px;margin-left:-8px;box-shadow:0 1px 3px #0008} .backs img:first-child{margin-left:0}
+.iconbtn{margin-left:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.35em .7em;font-weight:600;flex:none}
+#bridgewrap{position:relative;flex:none;padding-inline:calc(var(--dw) + 6px);margin-block:2px}
+#bridge{position:relative;aspect-ratio:1890/426;background-size:100% 100%;border-radius:8px;box-shadow:0 6px 18px #000a}
+.zone{position:absolute;top:0;bottom:0;width:23.81%;pointer-events:none;display:flex;align-items:flex-end;justify-content:center;font:800 clamp(.5rem,1.3vw,.8rem)/1 var(--body);letter-spacing:.12em;padding-bottom:2px;transition:left .9s}
+.zone.threat{background:linear-gradient(#ff000055,#ff000022);color:#fff;box-shadow:inset 0 0 0 2px #ff3b3b;text-shadow:0 1px 2px #000}
+.zone.exit{background:linear-gradient(#35ff8a22,#35ff8a11);color:#eafff0;box-shadow:inset 0 0 0 2px #46e58a;text-shadow:0 1px 2px #000}
+.tile{position:absolute;top:0;bottom:0;width:4.762%;border:0;background:none;padding:0}
+.tile.can{cursor:pointer;background:#ffffff26;box-shadow:inset 0 0 0 3px var(--gold);animation:pulse 1.1s infinite alternate}
+.tile.can:hover,.tile.can:focus-visible{background:#ffd86b80;outline:none}
+.tile .tl{pointer-events:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:800 clamp(.5rem,1.2vw,.75rem)/1.1 var(--body);background:#000b;color:var(--gold);padding:3px 5px;border-radius:6px;white-space:nowrap;z-index:5}
+@keyframes pulse{from{background:#ffffff14}to{background:#ffd86b55}}
+.tok{position:absolute;width:var(--tok);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--teal);box-shadow:0 3px 8px #000c;transition:left .55s cubic-bezier(.3,1.4,.5,1),opacity .4s;pointer-events:none;z-index:3;background:#000}
+.tok img{width:100%;height:100%;border-radius:50%;display:block}
+.tok.opp{border-color:var(--orange)} .tok.me{top:73%} .tok.opp{top:27%}
+.tok.off{opacity:.25}
+.tok .you{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);font:800 .6rem/1 var(--body);background:var(--teal);color:#00201f;padding:1px 4px;border-radius:4px}
+.tok.opp .you{background:var(--orange);bottom:auto;top:-13px}
+#dragon{position:absolute;top:50%;width:var(--dw);aspect-ratio:1;border-radius:50%;transform:translateY(-50%);border:4px solid var(--bad);box-shadow:0 0 22px #ff3b3b99,0 4px 10px #000c;transition:left 1.1s cubic-bezier(.5,0,.3,1);z-index:4;background:none;padding:0;cursor:pointer}
+#dragon img{width:100%;height:100%;border-radius:50%;display:block}
+#table{flex:1 0 auto;display:flex;gap:10px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;padding-block:2px}
+.slot{display:flex;flex-direction:column;gap:3px;align-items:center;background:#0003;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
+.slot h4{margin:0;font:800 .68rem/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.slot .cards{display:flex;gap:4px;align-items:center;min-height:calc(var(--mini)*1.36)}
+.nest .cards .cardb{margin-left:calc(var(--mini)*-.45)} .nest .cards .cardb:first-child{margin-left:0}
+.meter{font-weight:800;font-size:.8rem;white-space:nowrap} .meter.hot{color:var(--bad)}
+.empty{width:var(--mini);height:calc(var(--mini)*1.36);border:2px dashed var(--line);border-radius:6px;display:grid;place-items:center;color:var(--dim);font-size:.7rem;text-align:center}
+#prompt{flex:none;display:flex;flex-direction:column;gap:5px;align-items:center;min-height:56px;justify-content:center;text-align:center}
+#prompt .q{font-weight:800;font-size:clamp(.9rem,2vw,1.1rem);color:var(--gold)}
+#prompt .q.cpu{color:var(--dim);font-weight:600}
+#prompt .opts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-height:30vh;overflow:auto}
+#ticker{font-size:.84rem;color:var(--dim);min-height:1.3em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hand{flex:none;display:flex;gap:6px;justify-content:center;align-items:flex-end;min-height:calc(var(--card)*1.36)}
+#hand .cardb img{width:var(--card);border-radius:8px}
+#hand .cardb.can{transform:translateY(-6px)} #hand .cardb.can img{outline:3px solid var(--gold);box-shadow:0 0 16px #ffd86bcc}
+#hand .cardb.no img{filter:brightness(.6)}
+/* overlays */
+.ov{position:fixed;inset:0;background:#12030899;display:none;align-items:center;justify-content:center;z-index:50;padding:16px;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
+.ov.show{display:flex}
+.sheet{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:min(760px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 60px #000c}
+.sheet .acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.zoom{align-items:center;text-align:center} .zoom img{max-height:62vh;width:auto;max-width:100%;border-radius:14px;box-shadow:0 10px 30px #000c}
+.zoom p{margin:0;max-width:46ch}
+#splash{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;z-index:40;transition:transform .25s,opacity .25s;text-align:center}
+#splash.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#splash img{width:min(52vw,230px);border-radius:14px;box-shadow:0 0 0 4px var(--orange),0 16px 50px #000e}
+#splash b{display:block;margin-top:6px;background:#000c;border-radius:8px;padding:2px 8px}
+#banner{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:41;font:italic 700 clamp(2rem,8vw,4rem)/1 var(--disp);color:var(--gold);text-shadow:0 4px 0 #7a2a12,0 0 30px #000;opacity:0;pointer-events:none;transition:opacity .3s;text-align:center}
+#banner.on{opacity:1}
+#coach{position:fixed;left:50%;bottom:calc(var(--card)*1.36 + 90px);transform:translateX(-50%);z-index:45;background:#fff3df;color:#2a0710;border-radius:14px;padding:10px 14px;max-width:min(92vw,520px);box-shadow:0 10px 30px #000c;border:3px solid var(--gold2)}
+#coach p{margin:0 0 8px}
+.log{font-size:.88rem;display:flex;flex-direction:column;gap:2px} .log .t{color:var(--gold);font-weight:800;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.grid .cardb img{width:100%} .grid figure{margin:0;text-align:center;font-size:.78rem;color:var(--dim)}
+table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} table.st td,table.st th{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left} table.st td:not(:first-child),table.st th:not(:first-child){text-align:right}
+.ach{display:flex;gap:10px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)} .ach.off{opacity:.45}
+.ach i{font-style:normal;font-size:1.3rem;width:1.6em;text-align:center}
+.bracket{display:flex;gap:12px;overflow-x:auto} .bracket div{display:flex;flex-direction:column;gap:8px;justify-content:space-around;min-width:130px}
+.bracket span{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:.85rem;white-space:nowrap} .bracket span.w{border-color:var(--gold);color:var(--gold)} .bracket span.me{background:var(--panel2);font-weight:800}
+.man img{width:100%;border-radius:8px;display:block;margin-bottom:8px}
+@media (max-width:640px){
+  body{font-size:14px} #table{gap:5px} .slot{padding:3px 4px} .slot h4{font-size:.58rem;letter-spacing:.04em}
+  .bar .who span{display:none} #bridgewrap{padding-inline:0;padding-top:calc(var(--dw)*.8)} #dragon{top:0;transform:none} #bridge{aspect-ratio:1890/620}
+  :root{--card:21vw;--mini:10.2vw;--tok:6.2vw;--dw:11vw}
+}
+@media (max-height:560px){:root{--card:clamp(56px,15vh,100px);--mini:clamp(30px,8.5vh,56px)} #prompt{min-height:40px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app">
+  <section class="screen" id="title">
+    <img class="logo" id="tlogo" alt="">
+    <h1>Dragon Bridge</h1>
+    <p class="lbl" style="margin:0">Escape the bridge, or push your rival into the Dragon.</p>
+    <nav class="tmenu" aria-label="Main menu">
+      <button class="tbtn pri" data-a="cont" id="contbtn" hidden>Continue match</button>
+      <button class="tbtn pri" data-a="play" id="playbtn">Play</button>
+      <button class="tbtn" data-a="tutorial">How to Play</button>
+      <button class="tbtn" data-a="library">Card Library</button>
+      <button class="tbtn" data-a="rulebook">Rulebook</button>
+      <button class="tbtn" data-a="stats">Stats</button>
+      <button class="tbtn" data-a="options">Options</button>
+    </nav>
+    <p class="lbl" style="margin:0">Design and art by Keith Burgun <span id="ver"></span></p>
+  </section>
+  <section class="screen" id="setup" hidden><div class="wrap" id="setupbody"></div></section>
+  <section class="screen" id="game" hidden>
+    <div class="bar opp" id="oppbar"></div>
+    <div id="bridgewrap"><div id="bridge"></div><button id="dragon" data-a="zoomdragon" aria-label="The Dragon"><img alt=""></button></div>
+    <div id="table"></div>
+    <div id="prompt"><div id="ticker" aria-live="polite"></div><div class="q" id="q"></div><div class="opts" id="opts"></div></div>
+    <div id="hand"></div>
+    <div class="bar me" id="mebar"></div>
+  </section>
+</div>
+<div id="splash" aria-hidden="true"><img alt=""><b></b></div>
+<div id="banner" aria-hidden="true"></div>
+<div id="coach" hidden></div>
+<div class="ov" id="ov" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+const IMG = /*IMGS*/{};
+const MANUAL_PAGES = /*MANUAL_PAGES*/0;
+'use strict';
+const $ = s => document.querySelector(s), esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const im = id => IMG[id] || '';
+const face = w => im('face_' + w);
+const cardImg = (kind, id) => im(kind === 'wiz' ? 'wz_' + id : kind === 'item' ? 'it_' + id : kind === 'hack' ? 'hk_' + id : id);
+const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+/* ---------- profile (saved in this browser) ---------- */
+const DEF = {opt: {speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, elo: 1000, bestElo: 1000, rankGames: 0, daily: {}, pz: {}, trophies: 0, tutDone: false, seen: {}};
+let P = clone(DEF), MEM = {};
+const store = {get(k) { try { return localStorage.getItem(k); } catch (e) { return MEM[k] || null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { MEM[k] = v; } }, del(k) { try { localStorage.removeItem(k); } catch (e) {} delete MEM[k]; }};
+function loadProf() { try { const j = JSON.parse(store.get('db_profile') || 'null'); if (j) { P = Object.assign(clone(DEF), j); P.opt = Object.assign(clone(DEF.opt), j.opt); } } catch (e) {} }
+const saveProf = () => store.set('db_profile', JSON.stringify(P));
+
+/* ---------- sound ---------- */
+let AC = null;
+function beep(f, d = .09, type = 'triangle', v = .07, slide = 0) {
+  if (!P.opt.sound) return;
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; if (slide) o.frequency.linearRampToValueAtTime(f + slide, AC.currentTime + d); g.gain.value = v; g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + d); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime + d); } catch (e) {}
+}
+const SFX = {card: () => beep(520, .08), move: () => beep(340, .12, 'sine', .08, 160), bump: () => beep(160, .16, 'square', .06, -70), gem: () => beep(880, .1, 'sine', .06, 220), flight: () => { beep(120, .5, 'sawtooth', .07, 260); }, win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .18), i * 120)), lose: () => [330, 262, 196].forEach((f, i) => setTimeout(() => beep(f, .25, 'sawtooth', .05), i * 160))};
+
+/* ---------- screens and overlays ---------- */
+function show(id) { for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id; if (id !== 'game') { $('#coach').hidden = true; } }
+function openOv(html, cls) { $('#sheet').className = 'sheet ' + (cls || ''); $('#sheet').innerHTML = html; $('#ov').classList.add('show'); const f = $('#sheet').querySelector('[autofocus],button'); if (f) f.focus(); }
+function closeOv() { $('#ov').classList.remove('show'); zoomCb = null; }
+let zoomCb = null;
+function zoom(src, title, text, choose) {
+  zoomCb = choose ? choose.fn : null;
+  openOv(`<img src="${src}" alt="${esc(title || '')}">${title ? `<h3>${esc(title)}</h3>` : ''}${text ? `<p>${text}</p>` : ''}<div class="acts">${choose ? `<button class="btn pri" data-a="zoomok" autofocus>${esc(choose.label)}</button>` : ''}<button class="btn" data-a="close">${choose ? 'Cancel' : 'Close'}</button></div>`, 'zoom');
+}
+const wizText = w => `<b>${esc(WIZ[w].title)}</b><br>` + WIZ[w].t.map(esc).join('<br>');
+function zoomThing(kind, id, choose) {
+  if (kind === 'wiz') return zoom(im('wz_' + id), WIZ[id].n, wizText(id), choose);
+  if (kind === 'item') return zoom(im('it_' + id), ITEMS[id].n, esc(ITEMS[id].t), choose);
+  if (kind === 'hack') return zoom(im('hk_' + id), HACKS[id].n, `Cost: ${HACKS[id].cost} White Gems. ` + esc(HACKS[id].t), choose);
+  return zoom(im(id), ACTIONS[id].n, esc(ACTIONS[id].t) + `<br><span class="lbl">Wings: ${ACTIONS[id].w} · Dragon Power: ${esc(ACTIONS[id].pw || 'none')}</span>`, choose);
+}
+
+/* ---------- a match ---------- */
+let M = null;   // {G, cfg, busy, logSeen}
+const HUMAN = 0;
+const LEVEL_NAMES = {easy: 'Easy', normal: 'Normal', hard: 'Hard', expert: 'Expert'};
+function namesFor(wiz) { const a = WIZ[wiz[0]].s, b = WIZ[wiz[1]].s; return a === b ? [a + ' (you)', b + ' (CPU)'] : [a, b]; }
+function startMatch(cfg) {
+  let G;
+  if (cfg.puzzle) { G = Game.resume(cfg.puzzle.snap, [], []); }
+  else { const S = newState({wiz: cfg.wiz, seed: cfg.seed, first: cfg.first, names: namesFor(cfg.wiz)}); G = new Game(S); }
+  M = {G, cfg, busy: false, fresh: true};
+  $('#ticker').textContent = cfg.puzzle ? 'Find the forced win.' : ''; show('game'); closeOv(); saveMatch(); render(); pump();
+}
+function saveMatch() { if (!M || M.G.over || M.cfg.puzzle) return; store.set('db_save', JSON.stringify({snap: M.G.snap, decs: M.G.decs, cfg: M.cfg})); }
+function resumeMatch() {
+  try { const j = JSON.parse(store.get('db_save')); const G = Game.resume(j.snap, j.decs, []); M = {G, cfg: j.cfg, busy: false, fresh: true}; $('#ticker').textContent = ''; show('game'); render(); pump(); }
+  catch (e) { store.del('db_save'); toTitle(); }
+}
+const speed = () => M && M.cfg.fast ? 0 : (P.opt.speed ?? 1);
+function pump() {
+  const G = M.G;
+  if (G.over) { render(); return finish(); }
+  const q = G.req;
+  if (M.cfg.puzzle && G.S.turn > M.cfg.puzzle.turn + 1) { render(); return finish(true); }
+  render();
+  if (q.p === HUMAN) { coachFor(q); return; }
+  M.busy = true;
+  setTimeout(() => { if (!M || M.G !== G) return; const a = M.cfg.puzzle ? puzzleReply(G, HUMAN) : aiChoose(G, M.cfg.level); M.busy = false; answer(a); }, 520 * speed());
+}
+function answer(i) {
+  const G = M.G, S = G.S, n0 = S.log.length, pos0 = S.pos.slice(), fl0 = S.flights;
+  $('#coach').hidden = true;
+  G.answer(i);
+  const fresh = S.log.slice(n0);
+  let wait = 0;
+  for (const e of fresh) {
+    if (e.card && e.by !== HUMAN) { splash(e.card, e.m); wait = Math.max(wait, 950); SFX.card(); }
+    else if (e.card) SFX.card();
+    if (/ bumps /.test(e.m)) SFX.bump(); else if (/ moves | teleports /.test(e.m)) SFX.move(); else if (/readies|depletes/.test(e.m)) SFX.gem();
+    if (/^FLIGHT/.test(e.m)) { banner('Flight!'); SFX.flight(); wait = Math.max(wait, 1300); } else if (/^ROOST/.test(e.m)) { banner('Roost'); wait = Math.max(wait, 900); }
+  }
+  if (fresh.length) $('#ticker').textContent = fresh.filter(e => !/^—/.test(e.m)).slice(-2).map(e => e.m).join(' ');
+  saveMatch();
+  if (wait && speed()) { render(); M.busy = true; const G0 = G; setTimeout(() => { if (!M || M.G !== G0) return; M.busy = false; pump(); }, wait * speed()); } else pump();
+}
+let splashT = 0, bannerT = 0;
+function splash(card, text) { if (!speed()) return; const s = $('#splash'); s.querySelector('img').src = im(card); s.querySelector('b').textContent = text; s.classList.add('on'); clearTimeout(splashT); splashT = setTimeout(() => s.classList.remove('on'), 900 * speed()); }
+function banner(t) { if (!speed()) return; const b = $('#banner'); b.textContent = t; b.classList.add('on'); clearTimeout(bannerT); bannerT = setTimeout(() => b.classList.remove('on'), 1200 * speed()); }
+
+/* ---------- drawing the match ---------- */
+function gemsHtml(S, p) {
+  let h = '<span class="gems" title="Green Gems">';
+  for (let i = 0; i < S.gems[p]; i++) h += `<img src="${im(i < S.ready[p] ? 'icon_gem' : 'icon_gemdep')}" alt="${i < S.ready[p] ? 'ready gem' : 'depleted gem'}">`;
+  h += '</span>';
+  if (S.aside[p]) h += `<span class="lbl">+${S.aside[p]} stacked</span>`;
+  if (S.gelf[p]) h += `<span class="lbl">1 on Dragon</span>`;
+  h += `<span class="wcount" title="White Gems"><img src="${im('icon_white')}" alt="White Gems">${S.white[p]}</span>`;
+  return h;
+}
+function barHtml(S, p) {
+  const w = S.wiz[p], it = S.items[p].map(i => `<button class="cardb" data-a="zoomitem" data-id="${i}" aria-label="${esc(ITEMS[i].n)}"><img src="${im('it_' + i)}" alt=""></button>`).join('');
+  const hd = S.hackDown[p].length ? `<span class="lbl">${S.hackDown[p].length} Hack${S.hackDown[p].length > 1 ? 's' : ''} face down</span>` : '';
+  const hand = p === HUMAN ? '' : M.cfg.puzzle ? S.hand[p].map(c => `<button class="cardb" data-a="zoomcard" data-id="${c}"><img src="${im(c)}" alt="${esc(ACTIONS[c].n)}"></button>`).join('') : `<span class="backs" title="${S.hand[p].length} cards in hand">${S.hand[p].map(() => `<img src="${im('back')}" alt="">`).join('')}</span>`;
+  return `<button class="face" data-a="zoomwiz" data-id="${w}" aria-label="${esc(WIZ[w].n)}: read powers"><img src="${face(w)}" alt=""></button>
+    <div class="who"><b>${p === HUMAN ? 'You · ' : ''}${esc(WIZ[w].n)}</b><span class="lbl">${p === HUMAN ? esc(WIZ[w].title) : (M.cfg.oppName ? esc(M.cfg.oppName) + ' · ' : '') + (M.cfg.puzzle ? 'Puzzle opponent' : 'CPU · ' + LEVEL_NAMES[M.cfg.level])}</span></div>
+    ${gemsHtml(S, p)}${hd}<div class="oppinfo">${hand}</div><div class="items">${it}</div>
+    ${p === HUMAN ? `<button class="iconbtn" data-a="tip" id="tipbtn" ${M.cfg.tips ? '' : 'hidden'}>Tip</button><button class="iconbtn" data-a="log">Log</button><button class="iconbtn" data-a="menu">Menu</button>` : ''}`;
+}
+function render() {
+  if (!M) return;
+  const G = M.G, S = G.S, q = !G.over && G.req && G.req.p === HUMAN && !M.busy ? G.req : null;
+  $('#oppbar').innerHTML = barHtml(S, 1); $('#mebar').innerHTML = barHtml(S, 0);
+  // which options go where
+  const tiles = {}, handPick = {}, strip = [], btns = [];
+  if (q) {
+    const used = {};
+    q.opts.forEach((o, i) => {
+      if (o.tile != null && q.kind !== 'dir') tiles[o.tile] = {i, label: o.label === 'Stay' ? 'Stay' : ''};
+      else if (q.kind === 'dir') { tiles[o.tile] = {i, label: o.label}; btns.push({i, label: (o.dir < 0 ? '← ' : '') + o.label + (o.dir > 0 ? ' →' : '')}); }
+      else if (o.card && o.zone === 'hand') { let k = -1; S.hand[HUMAN].forEach((c, j) => { if (k < 0 && c === o.card && !used[j]) k = j; }); if (k >= 0) { used[k] = 1; handPick[k] = i; } else strip.push({i, o}); }
+      else if (o.card || o.item || o.hack) { strip.push({i, o}); if (q.kind === 'gem') btns.push({i, label: o.label}); }
+      else btns.push({i, label: o.label});
+    });
+  }
+  // bridge
+  let b = '';
+  const dz = S.dragon === 0 ? 0 : 76.19;
+  b += `<div class="zone threat" style="left:${dz}%">THREATENED</div><div class="zone exit" style="left:${76.19 - dz}%">EXIT</div>`;
+  for (let t = 0; t <= LAST; t++) { const c = tiles[t]; b += `<button class="tile${c ? ' can' : ''}" style="left:${t * 4.762}%" ${c ? `data-a="ans" data-i="${c.i}"` : 'tabindex="-1" disabled'} aria-label="${esc(tileName(t))}">${c && c.label ? `<span class="tl">${esc(c.label)}</span>` : ''}</button>`; }
+  for (const p of [1, 0]) b += `<div class="tok ${p ? 'opp' : 'me'}${S.away[p] ? ' off' : ''}" style="left:${(S.pos[p] + .5) * 4.762}%"><img src="${face(S.wiz[p])}" alt=""><span class="you">${p ? 'CPU' : 'YOU'}</span></div>`;
+  const br = $('#bridge');
+  if (!br.dataset.init) { br.style.backgroundImage = `url(${im('bridge')})`; br.dataset.init = 1; $('#dragon img').src = face('dragon'); }
+  // keep token elements alive so they animate between tiles
+  const old = br.querySelectorAll('.tok');
+  if (old.length === 2 && br.dataset.w === S.wiz.join()) { const keep = [...old]; br.querySelectorAll(':scope > :not(.tok)').forEach(e => e.remove()); const tmp = document.createElement('div'); tmp.innerHTML = b; [...tmp.children].forEach(e => { if (!e.classList.contains('tok')) br.insertBefore(e, keep[0]); }); [1, 0].forEach((p, k) => { keep[k].style.left = (S.pos[p] + .5) * 4.762 + '%'; keep[k].classList.toggle('off', !!S.away[p]); keep[k].querySelector('img').src = face(S.wiz[p]); }); }
+  else { br.innerHTML = b; br.dataset.w = S.wiz.join(); }
+  const dg = $('#dragon'), side = String(S.dragon);
+  if (dg.dataset.side !== side) {   // sliding across the bridge: don't let it catch taps meant for tiles
+    const jump = M.fresh; dg.style.transition = jump ? 'none' : ''; dg.style.pointerEvents = 'none'; dg.dataset.side = side;
+    setTimeout(() => { dg.style.pointerEvents = ''; dg.style.transition = ''; }, jump ? 50 : 1200);
+  }
+  M.fresh = false;
+  dg.style.left = S.dragon === 0 ? '0' : 'calc(100% - var(--dw))';
+  // table
+  const w = wings(S), need = flightNeed(S);
+  const cardB = (kind, id, extra = '') => `<button class="cardb" data-a="zoom${kind}" data-id="${id}" ${extra} aria-label="${esc((kind === 'item' ? ITEMS : kind === 'hack' ? HACKS : ACTIONS)[id].n)}"><img src="${cardImg(kind, id)}" alt=""></button>`;
+  const opt = (pred) => { const s = strip.find(x => pred(x.o)); return s ? `data-ci="${s.i}"` : ''; };
+  $('#table').innerHTML = `
+    <div class="slot"><h4>Deck</h4><div class="cards"><span class="cardb"><img src="${im('back')}" alt=""><span class="tag">${S.deck.length}</span></span></div></div>
+    <div class="slot nest"><h4>Dragon Nest</h4><div class="cards">${S.nest.map(c => cardB('card', c, opt(o => o.zone === 'nest' && o.card === c))).join('') || '<div class="empty">empty</div>'}</div>
+      <div class="meter ${S.nest.length >= 6 || w >= need - 2 ? 'hot' : ''}">${S.nest.length}/7 cards · ${w}/${need} Wings</div></div>
+    <div class="slot"><h4>Dragon Power</h4><div class="cards">${S.power ? cardB('card', S.power) : '<div class="empty">none</div>'}</div><div class="meter" style="max-width:9.5em;white-space:normal;font-weight:600;font-size:.7rem;text-align:center">${S.power ? esc(ACTIONS[S.power].pw || 'No power') : ''}</div></div>
+    <div class="slot"><h4>Item Market · ${itemCost(S)} Gems</h4><div class="cards">${S.market.map(i => cardB('item', i, opt(o => o.item === i))).join('') || '<div class="empty">empty</div>'}</div></div>
+    <div class="slot"><h4>Bridge Hacks</h4><div class="cards">${S.hacks.map(h => cardB('hack', h, opt(o => o.hack === h))).join('')}</div><div class="meter wcount"><img src="${im('icon_white')}" alt="">${S.supply} in supply</div></div>`;
+  for (const e of document.querySelectorAll('#table [data-ci]')) e.classList.add('sel');
+  // hand
+  $('#hand').innerHTML = S.hand[HUMAN].map((c, j) => `<button class="cardb ${handPick[j] != null ? 'can' : q ? 'no' : ''}" data-a="hand" data-id="${c}" ${handPick[j] != null ? `data-ci="${handPick[j]}"` : ''} aria-label="${esc(ACTIONS[c].n)}"><img src="${im(c)}" alt=""></button>`).join('');
+  // prompt
+  const qe = $('#q'), oe = $('#opts');
+  if (G.over) { qe.textContent = ''; oe.innerHTML = ''; return; }
+  if (!q) { qe.className = 'q cpu'; qe.textContent = G.req && G.req.p !== HUMAN ? `${nm(S, 1)} is thinking…` : '…'; oe.innerHTML = ''; return; }
+  qe.className = 'q'; qe.textContent = q.prompt;
+  let h = '';
+  if (q.kind !== 'gem') for (const s of strip) if (!(s.o.zone === 'nest') && !(s.o.item && S.market.includes(s.o.item)) && !(s.o.hack && S.hacks.includes(s.o.hack))) h += `<button class="cardb sel" data-a="strip" data-ci="${s.i}" aria-label="${esc(s.o.label)}"><img src="${cardImg(s.o.item ? 'item' : s.o.hack ? 'hack' : 'card', s.o.card || s.o.item || s.o.hack)}" alt=""></button>`;
+  for (const x of btns) h += `<button class="btn ${btns.length <= 3 && x === btns[0] && q.kind !== 'gem' ? 'pri' : ''}" data-a="ans" data-i="${x.i}">${esc(x.label)}</button>`;
+  oe.innerHTML = h;
+  if (q.kind !== 'gem' && strip.some(s => s.o.zone === 'nest')) qe.textContent += ' (tap a highlighted card)';
+}
+function chooseCard(i) {   // a card-shaped option: zoom first so its text can be read, unless one-tap is on
+  const o = M.G.req.opts[i], kind = o.item ? 'item' : o.hack ? 'hack' : 'card', id = o.card || o.item || o.hack;
+  if (P.opt.oneTap) return answer(i);
+  const q = M.G.req, verb = q.main ? 'Play ' + ACTIONS[id].n : q.kind === 'gem' ? o.label : 'Choose ' + (kind === 'item' ? ITEMS : kind === 'hack' ? HACKS : ACTIONS)[id].n;
+  zoomThing(kind, id, {label: verb, fn: () => answer(i)});
+}
+
+/* ---------- tips and the tutorial coach ---------- */
+function tip() {
+  const G = M.G; if (!G.req || G.req.p !== HUMAN || M.busy) return;
+  const i = aiChoose(G, 'expert'), o = G.req.opts[i];
+  $('#ticker').textContent = 'Expert tip: ' + (o.tile != null && G.req.kind !== 'dir' ? (o.label === 'Stay' ? 'stay where you are' : 'go to ' + o.label) : o.label) + '.';
+}
+const COACH = {
+  card: 'This is your <b>Action Phase</b>. Tap a card to read it, then play it. <b>MOVE</b> walks you up to that many tiles, <b>BUMP</b> shoves your opponent exactly that far, and <b>TELEPORT</b> is a move that can never win the game by itself.',
+  tile: 'Tap a glowing tile. The red end is <b>Threatened</b> by the Dragon: finish your Gem Phase there and you’re pounced. The green end is the <b>Exit</b>: start a MOVE while standing on it and you escape.',
+  dir: 'A Bump goes one way for its full distance. Shove your opponent toward the Dragon, or away from the Exit.',
+  gem: 'Now the <b>Gem Phase</b>: one Gem Action. Flip a ready Green Gem to Teleport 2, ready a Gem if you stand on a Gem tile (tiles 5 and 8), spend 3 ready Gems on an Item, or pay White Gems for a Bridge Hack. White Gems come from Bumping.',
+  nest: 'Played cards go to the <b>Dragon Nest</b>. At 9 Wings the Dragon takes <b>Flight</b> to the other end and the last card played becomes its power. At 7 cards without a Flight the Nest is reshuffled (a <b>Roost</b>).',
+};
+function coachFor(q) {
+  if (!M.cfg.tutorial) return;
+  M.coach = M.coach || {};
+  let k = q.kind === 'card' && q.main ? 'card' : q.kind === 'tile' ? 'tile' : q.kind === 'dir' ? 'dir' : q.kind === 'gem' ? 'gem' : null;
+  if (k === 'card' && M.coach.card && !M.coach.nest && M.G.S.nest.length >= 2) k = 'nest';
+  if (!k || M.coach[k]) return; M.coach[k] = 1;
+  const c = $('#coach'); c.innerHTML = `<p>${COACH[k]}</p><div style="text-align:right"><button class="btn sm pri" data-a="coachok">Got it</button></div>`; c.hidden = false;
+}
+
+/* ---------- finishing a match: stats, achievements, modes ---------- */
+const ACH = [
+  ['first', '🏆', 'First Crossing', 'Win a match.'], ['escape', '🚪', 'Clean Getaway', 'Win by escaping.'], ['pounce', '🐉', 'Dragon Food', 'Win by getting your opponent pounced.'],
+  ['hard', '💪', 'Bridge Veteran', 'Beat a Hard CPU.'], ['expert', '🎓', 'Bridge Master', 'Beat an Expert CPU.'], ['quick', '⚡', 'Express Lane', 'Win within 8 turns.'],
+  ['items', '🎒', 'Pack Rat', 'Win while owning 3 Items.'], ['flights', '🪽', 'Frequent Flyer', 'Win a match with 3 or more Flights.'], ['five', '🧙', 'Faculty Meeting', 'Win with 5 different Wizards.'],
+  ['all', '🌈', 'The Whole Academy', 'Win with all 15 Wizards.'], ['tour', '🥇', 'Champion of the Isles', 'Win a Tournament.'], ['rank5', '📈', 'Rising Star', 'Reach Rank 5 in Ranked.'],
+  ['rank10', '👑', 'Starchmage', 'Reach Rank 10 in Ranked.'], ['daily3', '📅', 'Regular', 'Win the Daily Challenge 3 days in a row.'], ['pz', '🧩', 'Problem Solver', 'Solve every Puzzle.'],
+];
+const rankOf = elo => Math.max(1, Math.min(10, Math.floor((elo - 800) / 100) + 1));
+const levelForRank = r => r <= 2 ? 'easy' : r <= 5 ? 'normal' : r <= 8 ? 'hard' : 'expert';
+function grant(id, out) { if (!P.ach[id]) { P.ach[id] = todayKey(); out.push(ACH.find(a => a[0] === id)); } }
+function dailyStreak() { let n = 0; const d = new Date(); for (;;) { const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); if (P.daily[k] === 'W') n++; else if (n || k !== todayKey()) break; d.setDate(d.getDate() - 1); if (n > 400) break; } return n; }
+function finish(puzzleFail) {
+  const S = M.G.S, cfg = M.cfg, won = S.winner === HUMAN && !puzzleFail, got = [];
+  store.del('db_save');
+  (won ? SFX.win : SFX.lose)();
+  let extra = '', acts = '<button class="btn pri" data-a="again" autofocus>Play again</button>';
+  if (cfg.puzzle) {
+    if (won) { P.pz[cfg.puzzle.id] = 1; if (PUZZLES.every(z => P.pz[z.id])) grant('pz', got); }
+    const next = PUZZLES.find(z => !P.pz[z.id]);
+    extra = won ? '<p>Solved. Your opponent had no way out.</p>' : `<p>Not solved: ${S.winner === 1 ? 'you were pounced' : 'your opponent slipped away'}. A forced win is there; try a different line.</p>`;
+    acts = (won ? (next ? `<button class="btn pri" data-a="pzgo" data-id="${next.id}" autofocus>Next puzzle</button>` : '') : '<button class="btn pri" data-a="again" autofocus>Try again</button>') + '<button class="btn" data-a="play">Puzzle list</button>';
+  } else {
+    const k = cfg.mode + ':' + (cfg.level || ''), st = P.st[k] = P.st[k] || {w: 0, l: 0}; won ? st.w++ : st.l++;
+    const wz = cfg.wiz[0], ws = P.wz[wz] = P.wz[wz] || {w: 0, l: 0}; won ? ws.w++ : ws.l++;
+    if (won) {
+      grant('first', got); grant(S.reason === 'escape' ? 'escape' : 'pounce', got);
+      if (cfg.level === 'hard' || cfg.level === 'expert') grant('hard', got); if (cfg.level === 'expert') grant('expert', got);
+      if (S.turn <= 8) grant('quick', got); if (S.items[0].length >= 3) grant('items', got); if (S.flights >= 3) grant('flights', got);
+      const n = Object.values(P.wz).filter(x => x.w > 0).length; if (n >= 5) grant('five', got); if (n >= 15) grant('all', got);
+    }
+    if (cfg.mode === 'ranked') {
+      const exp = 1 / (1 + 10 ** ((cfg.oppElo - P.elo) / 400)), d = Math.round(32 * ((won ? 1 : 0) - exp)), r0 = rankOf(P.elo);
+      P.elo += d; P.bestElo = Math.max(P.bestElo, P.elo); P.rankGames++;
+      const r1 = rankOf(P.elo); if (r1 >= 5) grant('rank5', got); if (r1 >= 10) grant('rank10', got);
+      extra = `<p>Elo ${d >= 0 ? '+' : ''}${d} → <b>${P.elo}</b> · Rank ${r1}${r1 > r0 ? ' (promoted!)' : r1 < r0 ? ' (demoted)' : ''}</p>`;
+      acts = '<button class="btn pri" data-a="rankgo" autofocus>Find next match</button>';
+    }
+    if (cfg.mode === 'daily') { if (!P.daily[cfg.day]) P.daily[cfg.day] = won ? 'W' : 'L'; const s = dailyStreak(); if (s >= 3) grant('daily3', got); extra = `<p>Today’s result is recorded: <b>${P.daily[cfg.day] === 'W' ? 'Won' : 'Lost'}</b>. Streak: ${s}.</p>`; acts = '<button class="btn" data-a="again">Replay for fun</button>'; }
+    if (cfg.mode === 'tour') {
+      const T = P.tour;
+      if (won) { T.round++; if (T.round >= 3) { P.trophies++; grant('tour', got); extra = '<p><b>You win the Tournament!</b> A trophy is added to your stats.</p>'; P.tour = null; acts = '<button class="btn pri" data-a="play" autofocus>New Tournament</button>'; } else { tourAdvance(T); extra = `<p>You advance to the ${['', 'Semifinal', 'Final'][T.round]}.</p>`; acts = '<button class="btn pri" data-a="tourgo" autofocus>Next match</button>'; } }
+      else { extra = `<p>You’re out of the Tournament in the ${['Quarterfinal', 'Semifinal', 'Final'][T.round]}.</p>`; P.tour = null; acts = '<button class="btn pri" data-a="play" autofocus>New Tournament</button>'; }
+    }
+    if (cfg.tutorial) { P.tutDone = true; }
+  }
+  saveProf();
+  const head = cfg.puzzle ? (won ? 'Puzzle solved!' : 'Not this time') : won ? (S.reason === 'escape' ? 'You escaped!' : 'The Dragon pounces!') : S.winner < 0 ? 'Stalemate' : S.reason === 'resign' ? 'You resigned' : S.reason === 'escape' ? `${WIZ[S.wiz[1]].s} escaped` : 'You were pounced';
+  const sub = cfg.puzzle ? '' : won ? (S.reason === 'escape' ? 'You made it off the bridge.' : `${WIZ[S.wiz[1]].s} ended the Gem Phase on a Threatened tile.`) : S.winner < 0 ? 'Nobody got off the bridge.' : S.reason === 'resign' ? 'The match counts as a loss.' : S.reason === 'escape' ? 'Your opponent started a MOVE on an Exit tile.' : 'You ended your Gem Phase on a Threatened tile.';
+  const M0 = M;
+  setTimeout(() => M === M0 && openOv(`<h2>${head}</h2><p style="margin:0">${sub} <span class="lbl">${cfg.puzzle ? '' : S.turn + ' turns.'}</span></p>${extra}${got.map(a => `<div class="ach"><i>${a[1]}</i><div><b>Achievement: ${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}<div class="acts">${acts}<button class="btn" data-a="log">Match log</button><button class="btn" data-a="totitle">Title</button></div>`), 700 * (speed() || .2));
+}
+
+/* ---------- modes ---------- */
+const randWiz = (not) => { const a = WIZ_IDS.filter(w => w !== not); return a[Math.floor(Math.random() * a.length)]; };
+const BOTS = ['Starchy', 'GaleForce', 'NestEgg', 'Roostmaster', 'WingNine', 'TileHopper', 'BumpQueen', 'Pouncival', 'ExitSign', 'OrbWeaver', 'Skatewitch', 'Loomlord', 'Checkm8', 'SodaPop', 'HackerMay', 'Dazzler', 'BaitShop', 'LeapYear', 'Thunderbox', 'Gemhoard'];
+function seedFrom(str) { let h = 2166136261; for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function dailyToday() { const day = todayKey(), h = seedFrom('dragonbridge' + day), me = WIZ_IDS[h % 15], opp = WIZ_IDS[(h >>> 8) % 15 === h % 15 ? ((h >>> 8) + 1) % 15 : (h >>> 8) % 15], level = ['normal', 'normal', 'hard', 'hard', 'expert'][(h >>> 16) % 5]; return {day, seed: h & 0x7fffffff, wiz: [me, opp], level, first: (h >>> 20) & 1}; }
+function tourNew(wiz, level) {
+  const others = WIZ_IDS.filter(w => w !== wiz).sort(() => Math.random() - .5).slice(0, 7), seats = [wiz].concat(others);
+  P.tour = {wiz, level, round: 0, rounds: [seats], me: 0, path: [0]}; saveProf();
+}
+function tourAdvance(T) {   // play out the other matches of the round just finished
+  const cur = T.rounds[T.rounds.length - 1], next = [];
+  for (let i = 0; i < cur.length; i += 2) next.push(i === T.me - T.me % 2 ? T.wiz : cur[i + (Math.random() < .5 ? 0 : 1)]);
+  T.me = Math.floor(T.me / 2); T.path.push(T.me); T.rounds.push(next);
+}
+const tourOpp = T => { const cur = T.rounds[T.rounds.length - 1]; return cur[T.me ^ 1]; };
+function bracketHtml(T) {
+  return '<div class="bracket">' + T.rounds.map((r, k) => '<div>' + r.map((w, i) => `<span class="${T.path[k] === i ? 'me' : ''}${T.rounds[k + 1] && T.rounds[k + 1][i >> 1] === w ? ' w' : ''}">${esc(WIZ[w].s)}${T.path[k] === i ? ' (you)' : ''}</span>`).join('') + '</div>').join('') + '</div>';
+}
+function launch() {
+  const o = P.opt, mode = o.mode, me = o.wiz;
+  if (mode === 'versus') return startMatch({mode, wiz: [me, o.opp === 'random' ? randWiz(me) : o.opp], level: o.level, tips: o.tips});
+  if (mode === 'tour') { if (!P.tour) tourNew(me, o.level); return tourGo(); }
+  if (mode === 'ranked') return rankGo();
+  if (mode === 'daily') { const d = dailyToday(); return startMatch({mode, wiz: d.wiz, level: d.level, seed: d.seed, first: d.first, day: d.day}); }
+}
+function tourGo() { const T = P.tour, lv = T.level, up = {easy: 'normal', normal: 'hard', hard: 'expert', expert: 'expert'}; startMatch({mode: 'tour', wiz: [T.wiz, tourOpp(T)], level: T.round === 2 ? up[lv] : lv}); }
+function rankGo() { const r = rankOf(P.elo), oppElo = Math.max(700, P.elo + Math.round((Math.random() - .5) * 160)), ro = rankOf(oppElo); startMatch({mode: 'ranked', wiz: [P.opt.wiz, randWiz()], level: levelForRank(ro), oppElo, oppName: BOTS[Math.floor(Math.random() * BOTS.length)] + ' (' + oppElo + ')'}); }
+function puzzleGo(id) { const z = PUZZLES.find(x => x.id === +id); startMatch({mode: 'puzzle', puzzle: z, wiz: z.snap.wiz, level: 'expert'}); }
+
+function drawSetup() {
+  const o = P.opt, mode = o.mode;
+  const modes = [['versus', 'Versus'], ['tour', 'Tournament'], ['ranked', 'Ranked'], ['daily', 'Daily Challenge'], ['puzzle', 'Puzzles']];
+  let h = `<div class="row"><button class="btn sm" data-a="totitle">← Title</button><h2>Play</h2></div>
+    <div class="row"><b>Mode</b><span class="seg">${modes.map(([m, l]) => `<button class="btn sm" data-a="setmode" data-v="${m}" aria-pressed="${m === mode}">${l}</button>`).join('')}</span></div>`;
+  const pickRow = (cur, act, withRandom) => `<div class="picks">${withRandom ? `<button class="pick" data-a="${act}" data-v="random" aria-pressed="${cur === 'random'}"><img src="${im('logo')}" alt=""><div><b>Random</b><span>any Wizard</span></div></button>` : ''}${WIZ_IDS.map(w => `<button class="pick" data-a="${act}" data-v="${w}" aria-pressed="${cur === w}"><img src="${face(w)}" alt=""><div><b>${esc(WIZ[w].s)}</b><span>${esc(WIZ[w].title)}</span></div></button>`).join('')}</div>`;
+  const levels = `<div class="row"><b>CPU</b><span class="seg">${Object.keys(LEVEL_NAMES).map(l => `<button class="btn sm" data-a="setlevel" data-v="${l}" aria-pressed="${o.level === l}">${LEVEL_NAMES[l]}</button>`).join('')}</span></div>`;
+  const wizInfo = w => `<div class="info"><b>${esc(WIZ[w].n)}</b> <span class="lbl">${esc(WIZ[w].title)}</span> <button class="btn sm" data-a="zoomwiz" data-id="${w}">See card</button><ul>${WIZ[w].t.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
+  if (mode === 'versus') {
+    h += `<div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Start match</button>${levels}<label class="row" style="gap:6px"><input type="checkbox" id="opt-tips" data-t="tips" ${o.tips ? 'checked' : ''}> <b>Expert Tips</b> <span class="lbl">ask the Expert CPU what it would do</span></label></div>
+      <h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}<h3>Opponent</h3>${pickRow(o.opp, 'setopp', true)}${o.opp !== 'random' ? wizInfo(o.opp) : ''}`;
+  } else if (mode === 'tour') {
+    const T = P.tour;
+    h += T ? `<div class="info"><b>Tournament in progress</b> · ${['Quarterfinal', 'Semifinal', 'Final'][T.round]} vs ${esc(WIZ[tourOpp(T)].n)}</div>${bracketHtml(T)}<div class="row"><button class="btn pri" data-a="tourgo">Play ${['Quarterfinal', 'Semifinal', 'Final'][T.round]}</button><button class="btn" data-a="tourquit">Abandon Tournament</button></div>`
+      : `<p class="lbl" style="margin:0">Eight Wizards, single elimination. Win three matches to take the trophy. The Final is one difficulty level harder.</p><div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Start Tournament</button>${levels}</div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
+  } else if (mode === 'ranked') {
+    const r = rankOf(P.elo);
+    h += `<div class="info"><b>Rank ${r}</b> of 10 · Elo ${P.elo} <span class="lbl">(best ${P.bestElo}, ${P.rankGames} games)</span><br><span class="lbl">Opponents are picked near your rating; higher ranks play stronger CPUs. Every 100 Elo is a rank.</span></div>
+      <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Find a match</button></div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
+  } else if (mode === 'daily') {
+    const d = dailyToday(), rec = P.daily[d.day];
+    h += `<div class="info"><b>${d.day}</b> · You are <b>${esc(WIZ[d.wiz[0]].n)}</b> against <b>${esc(WIZ[d.wiz[1]].n)}</b> (${LEVEL_NAMES[d.level]} CPU). Everyone gets the same Wizards and the same shuffle today.<br>${rec ? `Today: <b>${rec === 'W' ? 'Won' : 'Lost'}</b>.` : 'Not played yet.'} Streak: ${dailyStreak()}.</div>
+      <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">${rec ? 'Replay for fun' : 'Play today’s challenge'}</button></div>${wizInfo(d.wiz[0])}${wizInfo(d.wiz[1])}`;
+  } else {
+    h += `<p class="lbl" style="margin:0">Each puzzle has a forced win: escape this turn, or leave your opponent no way to avoid the Dragon on their next turn. Their hand is shown face-up.</p>
+      <div class="picks">${PUZZLES.map((z, i) => `<button class="pick" data-a="pzgo" data-id="${z.id}"><img src="${face(z.snap.wiz[0])}" alt=""><div><b>${P.pz[z.id] ? '✓ ' : ''}Puzzle ${i + 1}</b><span>${esc(WIZ[z.snap.wiz[0]].s)} vs ${esc(WIZ[z.snap.wiz[1]].s)} · ${z.level}</span></div></button>`).join('') || '<span class="lbl">No puzzles yet.</span>'}</div>`;
+  }
+  $('#setupbody').innerHTML = h;
+}
+
+/* ---------- sheets ---------- */
+function librarySheet(tab = 'act') {
+  const tabs = [['act', 'Actions'], ['wiz', 'Wizards'], ['item', 'Items'], ['hack', 'Bridge Hacks'], ['other', 'Other']];
+  const fig = (kind, id, name) => `<figure><button class="cardb" data-a="zoom${kind}" data-id="${id}" data-lib="${tab}"><img src="${cardImg(kind, id)}" alt="${esc(name)}"></button>${esc(name)}</figure>`;
+  let g = '';
+  if (tab === 'act') g = Object.keys(ACTIONS).map(c => fig('card', c, ACTIONS[c].n + (DECK.filter(x => x === c).length > 1 ? ' ×2' : ''))).join('');
+  if (tab === 'wiz') g = WIZ_IDS.map(w => fig('wiz', w, WIZ[w].n)).join('') + fig('wiz', 'may2', 'May (reverse)');
+  if (tab === 'item') g = Object.keys(ITEMS).map(i => fig('item', i, ITEMS[i].n)).join('');
+  if (tab === 'hack') g = Object.keys(HACKS).map(i => fig('hack', i, HACKS[i].n)).join('');
+  if (tab === 'other') g = [['gem', 'Green Gem'], ['gemdep', 'Depleted Gem'], ['white', 'White Gem'], ['dragon', 'The Dragon'], ['ref', 'Turn reference']].map(([id, n]) => `<figure><button class="cardb" data-a="zoomimg" data-id="${id}" data-n="${n}"><img src="${im(id)}" alt="${n}"></button>${n}</figure>`).join('');
+  openOv(`<div class="row"><h2>Card Library</h2><span class="seg">${tabs.map(([t, l]) => `<button class="btn sm" data-a="libtab" data-v="${t}" aria-pressed="${t === tab}">${l}</button>`).join('')}</span></div><div class="grid">${g}</div><div class="acts"><button class="btn" data-a="close">Close</button></div>`);
+}
+function statsSheet() {
+  const rows = [], tot = {w: 0, l: 0};
+  for (const [k, v] of Object.entries(P.st)) { const [m, l] = k.split(':'); rows.push(`<tr><td>${{versus: 'Versus', tour: 'Tournament', ranked: 'Ranked', daily: 'Daily Challenge'}[m] || m}${l ? ' · ' + LEVEL_NAMES[l] : ''}</td><td>${v.w}</td><td>${v.l}</td></tr>`); tot.w += v.w; tot.l += v.l; }
+  const wz = WIZ_IDS.filter(w => P.wz[w]).map(w => `<tr><td>${esc(WIZ[w].n)}</td><td>${P.wz[w].w}</td><td>${P.wz[w].l}</td></tr>`).join('');
+  const na = ACH.filter(a => P.ach[a[0]]).length;
+  openOv(`<h2>Stats</h2><div class="info">Matches: <b>${tot.w + tot.l}</b> · Wins: <b>${tot.w}</b> · Ranked: <b>Rank ${rankOf(P.elo)}</b> (Elo ${P.elo}) · Trophies: <b>${P.trophies}</b> · Daily streak: <b>${dailyStreak()}</b> · Puzzles: <b>${PUZZLES.filter(z => P.pz[z.id]).length}/${PUZZLES.length}</b></div>
+    ${rows.length ? `<table class="st"><tr><th>Mode</th><th>Won</th><th>Lost</th></tr>${rows.join('')}</table>` : '<p class="lbl">No matches played yet.</p>'}
+    ${wz ? `<table class="st"><tr><th>Wizard</th><th>Won</th><th>Lost</th></tr>${wz}</table>` : ''}
+    <h3>Achievements ${na}/${ACH.length}</h3>${ACH.map(a => `<div class="ach ${P.ach[a[0]] ? '' : 'off'}"><i>${a[1]}</i><div><b>${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}
+    <div class="acts"><button class="btn" data-a="close">Close</button></div>`);
+}
+function optionsSheet() {
+  const o = P.opt;
+  openOv(`<h2>Options</h2>
+    <div class="row"><b>CPU animation</b><span class="seg">${[[1.6, 'Slow'], [1, 'Normal'], [.5, 'Fast'], [0, 'Instant']].map(([v, l]) => `<button class="btn sm" data-a="setspeed" data-v="${v}" aria-pressed="${o.speed === v}">${l}</button>`).join('')}</span></div>
+    <label class="row" style="gap:6px"><input type="checkbox" id="opt-sound" data-t="sound" ${o.sound ? 'checked' : ''}> <b>Sound</b></label>
+    <label class="row" style="gap:6px"><input type="checkbox" id="opt-onetap" data-t="oneTap" ${o.oneTap ? 'checked' : ''}> <b>One-tap cards</b> <span class="lbl">play a card without the enlarged preview first</span></label>
+    <div class="row"><button class="btn sm" data-a="wipe1">Erase all progress…</button></div>
+    <div class="acts"><button class="btn pri" data-a="close">Done</button></div>`);
+}
+function rulebookSheet() { let h = '<div class="row"><h2>Rulebook</h2><button class="btn sm" data-a="close">Close</button></div><div class="man">'; for (let i = 1; i <= MANUAL_PAGES; i++) h += `<img loading="lazy" src="${im('manual_' + String(i).padStart(2, '0'))}" alt="Rulebook page ${i}">`; openOv(h + '</div><div class="acts"><button class="btn" data-a="close">Close</button></div>'); }
+function logSheet() {
+  const L = M.G.S.log; let h = '';
+  for (const e of L) h += /^—/.test(e.m) ? `<div class="t">${esc(e.m.replace(/—/g, '').trim())}</div>` : `<div>${esc(e.m)}</div>`;
+  openOv(`<div class="row"><h2>Match log</h2><button class="btn sm" data-a="close">Close</button></div><div class="log">${h}</div>`); const s = $('#sheet'); s.scrollTop = s.scrollHeight;
+}
+function menuSheet() {
+  openOv(`<h2>Menu</h2><div class="tmenu" style="margin:0 auto"><button class="tbtn pri" data-a="close">Back to the match</button><button class="tbtn" data-a="zoomimg" data-id="ref" data-n="Turn reference">Turn reference card</button><button class="tbtn" data-a="rulebook">Rulebook</button><button class="tbtn" data-a="library">Card Library</button><button class="tbtn" data-a="options">Options</button>
+    ${M.cfg.puzzle ? '<button class="tbtn" data-a="again">Restart puzzle</button><button class="tbtn" data-a="totitle">Quit to title</button>' : '<button class="tbtn" data-a="totitle">Save &amp; quit to title</button><button class="tbtn" data-a="resign">Resign</button>'}</div>`);
+}
+function toTitle() { M = null; closeOv(); $('#contbtn').hidden = !store.get('db_save'); $('#playbtn').classList.toggle('pri', !store.get('db_save')); show('title'); }
+
+/* ---------- input ---------- */
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-a]'); if (!b) { if (ev.target.id === 'ov') closeOv(); return; }
+  const a = b.dataset.a, v = b.dataset.v, id = b.dataset.id;
+  if (a === 'ans') { if (M && !M.busy) answer(+b.dataset.i); return; }
+  if (b.dataset.ci != null && M && !M.busy && M.G.req && M.G.req.p === HUMAN) return chooseCard(+b.dataset.ci);
+  switch (a) {
+    case 'close': closeOv(); break;
+    case 'zoomok': { const f = zoomCb; closeOv(); if (f) f(); break; }
+    case 'hand': case 'zoomcard': zoomThing('card', id); break;
+    case 'zoomitem': zoomThing('item', id); break;
+    case 'zoomhack': zoomThing('hack', id); break;
+    case 'zoomwiz': zoomThing('wiz', id); break;
+    case 'zoomimg': zoom(im(id), b.dataset.n); break;
+    case 'zoomdragon': zoom(im('dragon'), 'The Dragon', M ? `Flight at ${flightNeed(M.G.S)} Wings (now ${wings(M.G.S)}). Roost at 7 cards. The five orange tiles on the Dragon’s side are Threatened.` : ''); break;
+    case 'play': if (P.opt.mode === 'puzzle' || true) { show('setup'); closeOv(); M = null; drawSetup(); } break;
+    case 'cont': resumeMatch(); break;
+    case 'tutorial': startMatch({mode: 'versus', wiz: ['derby', 'eve'], level: 'easy', tutorial: true, first: 0, tips: true}); break;
+    case 'library': librarySheet(); break;
+    case 'libtab': librarySheet(v); break;
+    case 'rulebook': rulebookSheet(); break;
+    case 'stats': statsSheet(); break;
+    case 'options': optionsSheet(); break;
+    case 'totitle': toTitle(); break;
+    case 'setmode': P.opt.mode = v; saveProf(); drawSetup(); break;
+    case 'setwiz': P.opt.wiz = v; saveProf(); drawSetup(); break;
+    case 'setopp': P.opt.opp = v; saveProf(); drawSetup(); break;
+    case 'setlevel': P.opt.level = v; saveProf(); drawSetup(); break;
+    case 'setspeed': P.opt.speed = +v; saveProf(); optionsSheet(); break;
+    case 'launch': launch(); break;
+    case 'tourgo': tourGo(); break;
+    case 'tourquit': P.tour = null; saveProf(); drawSetup(); break;
+    case 'rankgo': rankGo(); break;
+    case 'pzgo': puzzleGo(id); break;
+    case 'again': { const c = M.cfg; if (c.mode === 'tour' || c.mode === 'ranked') { show('setup'); closeOv(); drawSetup(); } else startMatch(Object.assign({}, c, c.mode === 'versus' && P.opt.opp === 'random' && !c.tutorial ? {wiz: [c.wiz[0], randWiz(c.wiz[0])]} : {})); break; }
+    case 'tip': tip(); break;
+    case 'log': logSheet(); break;
+    case 'menu': menuSheet(); break;
+    case 'coachok': $('#coach').hidden = true; break;
+    case 'resign': openOv('<h2>Resign this match?</h2><p>It counts as a loss.</p><div class="acts"><button class="btn" data-a="resign2">Resign</button><button class="btn pri" data-a="close" autofocus>Keep playing</button></div>'); break;
+    case 'resign2': M.G.S.winner = 1; M.G.S.reason = 'resign'; M.G.req = null; closeOv(); render(); finish(); break;
+    case 'wipe1': openOv('<h2>Erase all progress?</h2><p>This permanently erases your stats, achievements, rank, trophies and any match in progress in this browser.</p><div class="acts"><button class="btn" data-a="wipe2">Erase everything</button><button class="btn pri" data-a="close" autofocus>Cancel</button></div>'); break;
+    case 'wipe2': store.del('db_profile'); store.del('db_save'); P = clone(DEF); toTitle(); break;
+  }
+});
+document.addEventListener('change', ev => { const t = ev.target.dataset && ev.target.dataset.t; if (!t) return; P.opt[t] = ev.target.checked; saveProf(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#ov').classList.contains('show')) closeOv(); else if (M && !M.G.over) menuSheet(); } });
+
+/* ---------- start ---------- */
+const PUZZLES = /*PUZZLES*/[];
+loadProf();
+$('#tlogo').src = im('logo');
+try { if (typeof APP_VERSION === 'string') $('#ver').textContent = '· ' + APP_VERSION; } catch (e) {}
+toTitle();
+</script>
