@@ -72,6 +72,9 @@ h1,h2,h3{font-family:var(--disp);font-style:italic;font-weight:700;margin:0;text
 .cardb.sel img{outline:3px solid var(--gold);box-shadow:0 0 14px var(--gold)}
 .cardb .tag{position:absolute;right:-3px;top:-5px;background:var(--gold);color:#3b0c18;font:800 .72rem/1 var(--body);padding:3px 5px;border-radius:999px}
 .oppinfo{display:flex;gap:6px;align-items:center}
+.eye{position:absolute;left:50%;top:-9px;transform:translateX(-50%);width:26px;height:18px;border-radius:999px;background:#fff3df;border:2px solid var(--bg);display:grid;place-items:center;box-shadow:0 1px 4px #000a;z-index:2}
+.eye svg{width:18px;height:12px;display:block}
+.oppinfo .cardb img{width:calc(var(--mini)*.8)} .oppinfo .cardb{margin-right:3px}
 .backs{display:flex} .backs img{width:calc(var(--mini)*.55);border-radius:4px;margin-left:-8px;box-shadow:0 1px 3px #0008} .backs img:first-child{margin-left:0}
 .iconbtn{margin-left:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.35em .7em;font-weight:600;flex:none}
 #bridgewrap{position:relative;flex:none;padding-inline:calc(var(--dw) + 6px);margin-block:2px}
@@ -289,10 +292,13 @@ function gemsHtml(S, p) {
   h += `<span class="wcount" title="White Gems"><img src="${im('icon_white')}" alt="White Gems">${S.white[p]}</span>`;
   return h;
 }
+const EYE = '<span class="eye" title="Your opponent knows you hold this card"><svg viewBox="0 0 24 16" aria-label="Known to your opponent"><path d="M1 8C4 3 8 1 12 1s8 2 11 7c-3 5-7 7-11 7S4 13 1 8Z" fill="#fff" stroke="#2a0710" stroke-width="2"/><circle cx="12" cy="8" r="4" fill="#2a0710"/></svg></span>';
+function knownOf(S, p) { const h = S.hand[p].slice(); return (S.known ? S.known[p] : []).filter(c => { const i = h.indexOf(c); if (i < 0) return false; h.splice(i, 1); return true; }); }
 function barHtml(S, p) {
   const w = S.wiz[p], it = S.items[p].map(i => `<button class="cardb" data-a="zoomitem" data-id="${i}" data-peek="it_${i}" aria-label="${esc(ITEMS[i].n)}"><img src="${im('it_' + i)}" alt=""></button>`).join('');
   const hd = S.hackDown[p].length ? `<span class="lbl">${S.hackDown[p].length} Hack${S.hackDown[p].length > 1 ? 's' : ''} face down</span>` : '';
-  const hand = p === HUMAN ? '' : M.cfg.puzzle ? S.hand[p].map(c => `<button class="cardb" data-a="zoomcard" data-id="${c}" data-peek="${c}"><img src="${im(c)}" alt="${esc(ACTIONS[c].n)}"></button>`).join('') : `<span class="backs" title="${S.hand[p].length} cards in hand">${S.hand[p].map(() => `<img src="${im('back')}" alt="">`).join('')}</span>`;
+  const seen = M.cfg.puzzle ? S.hand[p] : knownOf(S, p), hid = S.hand[p].length - seen.length;   // cards you have seen stay face-up
+  const hand = p === HUMAN ? '' : seen.map(c => `<button class="cardb" data-a="zoomcard" data-id="${c}" data-peek="${c}" title="You know ${esc(nm(S, p))} holds this"><img src="${im(c)}" alt="${esc(ACTIONS[c].n)}"></button>`).join('') + (hid ? `<span class="backs" title="${hid} unknown card${hid > 1 ? 's' : ''}">${Array(hid).fill(`<img src="${im('back')}" alt="">`).join('')}</span>` : '');
   return `<button class="face" data-a="zoomwiz" data-id="${w}" data-peek="wz_${w}" aria-label="${esc(WIZ[w].n)}: read powers"><img src="${face(w)}" alt=""></button>
     <div class="who"><b>${p === HUMAN ? 'You · ' : ''}${esc(WIZ[w].n)}</b><span class="lbl">${p === HUMAN ? esc(WIZ[w].title) : (M.cfg.oppName ? esc(M.cfg.oppName) + ' · ' : '') + (M.cfg.puzzle ? 'Puzzle opponent' : 'CPU · ' + LEVEL_NAMES[M.cfg.level])}</span></div>
     ${gemsHtml(S, p)}${hd}<div class="oppinfo">${hand}</div><div class="items">${it}</div>
@@ -354,7 +360,8 @@ function render() {
   for (const e of document.querySelectorAll('#table [data-ci]')) e.classList.add('sel');
   // hand
   $('#hand').classList.toggle('many', S.hand[HUMAN].length > 4);
-  $('#hand').innerHTML = S.hand[HUMAN].map((c, j) => `<button class="cardb ${handPick[j] != null ? 'can' : q ? 'no' : ''}" data-a="hand" data-id="${c}" data-peek="${c}" ${handPick[j] != null ? `data-ci="${handPick[j]}"` : ''} aria-label="${esc(ACTIONS[c].n)}"><img src="${im(c)}" alt=""></button>`).join('');
+  const myKnown = knownOf(S, HUMAN);   // an eye marks cards the opponent has seen
+  $('#hand').innerHTML = S.hand[HUMAN].map((c, j) => { const k = myKnown.indexOf(c), eye = k >= 0; if (eye) myKnown.splice(k, 1); return `<button class="cardb ${handPick[j] != null ? 'can' : q ? 'no' : ''}" data-a="hand" data-id="${c}" data-peek="${c}" ${handPick[j] != null ? `data-ci="${handPick[j]}"` : ''} aria-label="${esc(ACTIONS[c].n)}${eye ? ' (known to your opponent)' : ''}"><img src="${im(c)}" alt="">${eye ? EYE : ''}</button>`; }).join('');
   // prompt
   const lg = $('#loglive'); if (lg.dataset.n !== String(S.log.length) || lg.dataset.g !== String(M.id)) { lg.innerHTML = logHtml(S.log); lg.dataset.n = S.log.length; lg.dataset.g = M.id; lg.scrollTop = lg.scrollHeight; }
   const qe = $('#q'), oe = $('#opts');

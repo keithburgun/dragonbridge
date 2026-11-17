@@ -34,3 +34,8 @@ Where a card or the manual leaves room, the game does the following. Change any 
 **Items**
 - Techno-Cutlass "End tile" means any of the ten orange tiles.
 - Wing counts read from the cards: Bait 3; Fireball, Flame Arrow, Magic Dart, Transfer, Checkmate 2; Charge, Gale, Insight, Leap, Shockwave 1; Dazzle, Soda, Step, Hop 0.
+
+**Known cards**
+- A card counts as seen by the other player when a hand is revealed (Insight, or Shockwave against a hand with no MOVE card) or when it is taken in the open: from the Nest, from a revealed hand, as Bill's gift or Dragon Power swap, or by Lori's search.
+- A seen card stays known until it leaves the hand. With two copies of a card and one of them known, playing one leaves the other known.
+- The CPU uses the same information and nothing more when it plans.

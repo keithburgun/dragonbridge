@@ -93,7 +93,11 @@ const wings = S => S.nest.reduce((a, c) => a + ACTIONS[c].w, 0);
 const flightNeed = S => (S.power === 'checkmate' ? 11 : S.power === 'flamearrow' || S.power === 'gale' ? 10 : 9) + S.gelf[0] + S.gelf[1];
 const itemCost = S => S.power === 'transfer' ? 2 : 3;
 function win(S, p, why) { S.winner = p; S.reason = why; log(S, why === 'escape' ? `${nm(S, p)} ESCAPES the bridge and wins!` : `${nm(S, 1 - p)} is POUNCED by the Dragon. ${nm(S, p)} wins!`); throw END; }
+/* S.known[p]: cards in p's hand that the other player has seen (revealed, or taken in the open). */
+function trimKnown(S) { for (let p = 0; p < 2; p++) { const h = S.hand[p].slice(); S.known[p] = S.known[p].filter(c => { const i = h.indexOf(c); if (i < 0) return false; h.splice(i, 1); return true; }); } }
+const know = (S, p, c) => { S.known[p].push(c); };
 function* ask(S, p, kind, prompt, opts, extra) {
+  trimKnown(S);
   if (!opts.length) return null;
   if (opts.length === 1 && !(extra && extra.show)) return opts[0];
   const i = yield Object.assign({p, kind, prompt, opts}, extra);
@@ -223,14 +227,15 @@ const ACT = {
   },
   *bait(S, p) {
     const c = S.nest.filter(x => x !== 'insight');
-    if (c.length) { const k = yield* ask(S, p, 'pick', 'Bait: take a card from the Nest?', cardOpts(c, {zone: 'nest'}).concat({id: 'no', label: 'No thanks'})); if (k.card) { S.nest.splice(S.nest.indexOf(k.card), 1); S.hand[p].push(k.card); log(S, `${nm(S, p)} takes ${ACTIONS[k.card].n} from the Nest.`); } }
+    if (c.length) { const k = yield* ask(S, p, 'pick', 'Bait: take a card from the Nest?', cardOpts(c, {zone: 'nest'}).concat({id: 'no', label: 'No thanks'})); if (k.card) { S.nest.splice(S.nest.indexOf(k.card), 1); S.hand[p].push(k.card); know(S, p, k.card); log(S, `${nm(S, p)} takes ${ACTIONS[k.card].n} from the Nest.`); } }
   },
   *insight(S, p) {
     const o = cardOpts(S.hand[1 - p], {zone: 'opp'}).concat(cardOpts(S.nest, {zone: 'nest'}));
     log(S, `${nm(S, 1 - p)}’s hand is revealed: ${S.hand[1 - p].map(c => ACTIONS[c].n).join(', ') || 'no cards'}.`);
+    S.known[1 - p] = S.hand[1 - p].slice();
     if (o.length) {
       const k = yield* ask(S, p, 'pick', `Insight: take a card from ${nm(S, 1 - p)}’s hand or from the Nest`, o, {show: 1, noDet: 1, reveal: 1});
-      const from = k.zone === 'opp' ? S.hand[1 - p] : S.nest; from.splice(from.indexOf(k.card), 1); S.hand[p].push(k.card);
+      const from = k.zone === 'opp' ? S.hand[1 - p] : S.nest; from.splice(from.indexOf(k.card), 1); S.hand[p].push(k.card); know(S, p, k.card);
       log(S, `${nm(S, p)} takes ${ACTIONS[k.card].n} from ${k.zone === 'opp' ? nm(S, 1 - p) + '’s hand' : 'the Nest'}.`);
     }
     if (S.ready[p] === 1) ready(S, p, 1);
@@ -241,7 +246,7 @@ const ACT = {
     yield* bump(S, p, 2);
     const t = 1 - p, mv = [...new Set(S.hand[t].filter(c => ACTIONS[c].move))];
     if (mv.length) { const c = yield* ask(S, t, 'card', 'Shockwave: choose a MOVE card to shuffle into the deck', cardOpts(mv, {zone: 'hand'})); S.hand[t].splice(S.hand[t].indexOf(c.card), 1); S.deck.push(c.card); shuffle(S, S.deck); log(S, `${nm(S, t)} shuffles ${ACTIONS[c.card].n} into the deck.`); }
-    else log(S, `${nm(S, t)} reveals a hand with no MOVE cards: ${S.hand[t].map(c => ACTIONS[c].n).join(', ') || 'no cards'}.`);
+    else { S.known[t] = S.hand[t].slice(); log(S, `${nm(S, t)} reveals a hand with no MOVE cards: ${S.hand[t].map(c => ACTIONS[c].n).join(', ') || 'no cards'}.`); }
   },
   *checkmate(S, p) { yield* move(S, p, 2, {card: 1}); if (S.ready[p] > 0 && (yield* yn(S, p, 'Checkmate: deplete a Gem to Bump 3?', 'Deplete a Gem'))) { deplete(S, p, 1); yield* bump(S, p, 3); } },
 };
@@ -259,7 +264,7 @@ function* playCard(S, p, c, dest) {
   if (ACTIONS[c].bump && isW(S, p, 'bill') && S.t.phase === 'action') {
     const give = [...new Set(S.hand[t].filter(x => ACTIONS[x].bump))];
     const k = give.length ? yield* ask(S, t, 'card', `Bill Milton: give ${nm(S, p)} a BUMP card? If you don’t, Bill readies a Gem and Teleports 1.`, cardOpts(give, {zone: 'hand'}).concat({id: 'no', label: 'Give nothing'})) : {};
-    if (k.card) { S.hand[t].splice(S.hand[t].indexOf(k.card), 1); S.hand[p].push(k.card); log(S, `${nm(S, t)} gives ${nm(S, p)} ${ACTIONS[k.card].n}.`); }
+    if (k.card) { S.hand[t].splice(S.hand[t].indexOf(k.card), 1); S.hand[p].push(k.card); know(S, p, k.card); log(S, `${nm(S, t)} gives ${nm(S, p)} ${ACTIONS[k.card].n}.`); }
     else { ready(S, p, 1); yield* teleport(S, p, 1, {why: 'Bill Milton'}); }
   }
   if (c === 'gale' && isW(S, p, 'lori')) {
@@ -287,7 +292,7 @@ const HACKFX = {
   *deals(S, p) {
     const a = yield* ask(S, p, 'card', 'Illicit card deals: give up which card from your hand?', cardOpts(S.hand[p], {zone: 'hand'}), {show: 1});
     const b = yield* ask(S, p, 'pick', 'Take which card from the Nest?', cardOpts(S.nest, {zone: 'nest'}), {show: 1});
-    S.hand[p].splice(S.hand[p].indexOf(a.card), 1); S.nest.splice(S.nest.indexOf(b.card), 1); S.hand[p].push(b.card); S.nest.push(a.card);
+    S.hand[p].splice(S.hand[p].indexOf(a.card), 1); S.nest.splice(S.nest.indexOf(b.card), 1); S.hand[p].push(b.card); know(S, p, b.card); S.nest.push(a.card);
     log(S, `${nm(S, p)} swaps ${ACTIONS[a.card].n} for ${ACTIONS[b.card].n} from the Nest.`); deplete(S, 1 - p, 1);
   },
 };
@@ -335,7 +340,7 @@ function* gemPhase(S, p) {
     case 'buy': deplete(S, p, cost); yield* gainItem(S, p, c.item, S.market);
       if (isW(S, p, 'abragail')) {
         const k = yield* ask(S, p, 'pick', 'Abragail: take a card from the Nest, or ready a Gem', cardOpts(S.nest, {zone: 'nest'}).concat({id: 'gem', label: 'Ready a Gem'}, {id: 'no', label: 'Neither'}));
-        if (k.card) { S.nest.splice(S.nest.indexOf(k.card), 1); S.hand[p].push(k.card); log(S, `${nm(S, p)} takes ${ACTIONS[k.card].n} from the Nest.`); } else if (k.id === 'gem') ready(S, p, 1);
+        if (k.card) { S.nest.splice(S.nest.indexOf(k.card), 1); S.hand[p].push(k.card); know(S, p, k.card); log(S, `${nm(S, p)} takes ${ACTIONS[k.card].n} from the Nest.`); } else if (k.id === 'gem') ready(S, p, 1);
       } break;
     case 'hack': yield* doHack(S, p, c.hack); break;
     case 'bunny': { deplete(S, p, 1); const k = yield* ask(S, p, 'card', 'Bunny: play which Action card?', cardOpts(S.hand[p], {zone: 'hand'}), {show: 1}); yield* playCard(S, p, k.card, 'shuffle'); break; }
@@ -386,11 +391,11 @@ function* dragonCheck(S, p) {
       if (isW(S, q, 'lori') && S.deck.length) {
         const u = [...new Set(S.deck)].sort();
         const c = yield* ask(S, q, 'pick', 'Lori: search the deck for a card', cardOpts(u, {zone: 'deck'}), {show: 1, noDet: 1});
-        S.deck.splice(S.deck.indexOf(c.card), 1); S.hand[q].push(c.card); shuffle(S, S.deck); log(S, `${nm(S, q)} searches the deck and draws ${ACTIONS[c.card].n}.`);
+        S.deck.splice(S.deck.indexOf(c.card), 1); S.hand[q].push(c.card); know(S, q, c.card); shuffle(S, S.deck); log(S, `${nm(S, q)} searches the deck and draws ${ACTIONS[c.card].n}.`);
       }
       if (isW(S, q, 'bill') && S.power && S.hand[q].length) {
         const c = yield* ask(S, q, 'card', `Bill: exchange the Dragon Power (${ACTIONS[S.power].n}) for a card in your hand to gain 2 White Gems?`, cardOpts([...new Set(S.hand[q])], {zone: 'hand'}).concat({id: 'no', label: 'No'}));
-        if (c.card) { S.hand[q].splice(S.hand[q].indexOf(c.card), 1); S.hand[q].push(S.power); log(S, `${nm(S, q)} swaps ${ACTIONS[c.card].n} in as the Dragon Power and takes ${ACTIONS[S.power].n}.`); S.power = c.card; gainWhite(S, q, 2); }
+        if (c.card) { S.hand[q].splice(S.hand[q].indexOf(c.card), 1); S.hand[q].push(S.power); trimKnown(S); know(S, q, S.power); log(S, `${nm(S, q)} swaps ${ACTIONS[c.card].n} in as the Dragon Power and takes ${ACTIONS[S.power].n}.`); S.power = c.card; gainWhite(S, q, 2); }
       }
     }
   }
@@ -421,10 +426,12 @@ function* turn(S, p) {
   yield* dragonCheck(S, p);
   S.t.phase = 'draw';
   if (S.power === 'dart' && !S.away[p]) yield* teleport(S, p, 1, {dir: S.dragon === 0 ? 1 : -1, why: 'Dragon Power (Magic Dart)'});
+  trimKnown(S);
   let n = 0; while (S.hand[p].length < 4 && S.deck.length) { S.hand[p].push(S.deck.pop()); n++; }
   if (n) log(S, `${nm(S, p)} draws ${n} card${n > 1 ? 's' : ''}.`);
 }
 function* play(S) {
+  if (!S.known) S.known = [[], []];
   try {
     while (S.winner == null) {
       yield {kind: 'turn'};
@@ -440,7 +447,7 @@ function newState(o = {}) {
   const S = {seed: (o.seed != null ? o.seed : Math.floor(Math.random() * 2 ** 31)) | 0, turn: 0, cur: 0, dragon: 0, power: null, flights: 0,
     deck: DECK.slice(), nest: [], hand: [[], []], pos: [9, 11], wiz: (o.wiz || ['derby', 'eve']).slice(), ready: [1, 1], gems: [3, 3], aside: [0, 0],
     items: [[], []], market: [], itemDeck: Object.keys(ITEMS), hacks: [], hackDeck: Object.keys(HACKS), hackDown: [[], []], white: [0, 0], supply: 8,
-    away: [false, false], gelf: [0, 0], gelfR: [0, 0], once: [0, 0], t: {moveB: 0, bumpB: 0, noEscape: false, phase: 'start'}, inPlay: [], winner: null, reason: null, last: null, lastEv: null, log: []};
+    known: [[], []], away: [false, false], gelf: [0, 0], gelfR: [0, 0], once: [0, 0], t: {moveB: 0, bumpB: 0, noEscape: false, phase: 'start'}, inPlay: [], winner: null, reason: null, last: null, lastEv: null, log: []};
   if (o.names) S.names = o.names;
   const first = o.first != null ? o.first : (rnd(S) < 0.5 ? 0 : 1);
   S.cur = first; S.first = first; S.pos[first] = 9; S.pos[1 - first] = 11;
@@ -485,9 +492,11 @@ function simulate(snap, decs, policy, turns, det, rec) {
   }
   return S;
 }
-function determinize(S, me, seed) {
-  const o = 1 - me, pool = S.deck.concat(S.hand[o]).sort(), n = S.hand[o].length, R = {seed};
-  shuffle(R, pool); S.hand[o] = pool.slice(0, n); S.deck = pool.slice(n); S.seed = R.seed;
+function determinize(S, me, seed) {   // cards `me` has seen in the other hand stay there; the rest are reshuffled with the deck
+  const o = 1 - me, R = {seed}; trimKnown(S);
+  const seen = S.known[o].slice(), rest = S.hand[o].slice(); for (const c of seen) rest.splice(rest.indexOf(c), 1);
+  const pool = S.deck.concat(rest).sort(), n = rest.length;
+  shuffle(R, pool); S.hand[o] = seen.concat(pool.slice(0, n)); S.deck = pool.slice(n); S.seed = R.seed;
 }
 function checkState(S) {   // every card, gem and item is somewhere exactly once
   const cards = S.deck.concat(S.nest, S.hand[0], S.hand[1], S.inPlay, S.power ? [S.power] : []).sort().join();
