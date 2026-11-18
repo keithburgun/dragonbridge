@@ -60,7 +60,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
   const np = await p.evaluate(() => PUZZLES.length); ok(np >= 8, 'puzzles present');
   for (let i = 1; i <= np; i++) {
     await p.evaluate(id => puzzleGo(id), i); await p.waitForTimeout(100); if (i === 1) await shot('puzzle');
-    ok(/^Puzzle \d+: (Escape this turn!|Get .+ pounced on their next turn!)$/.test(await p.textContent('#sheet h2')), `puzzle ${i} opens by stating its goal`); await p.click('#sheet [data-a="close"]'); ok(await p.isVisible('#goal'), 'goal stays on screen');
+    ok(/^Puzzle \d+(Escape this turn!|Defeat .+ in 2 turns!)Start$/.test((await p.textContent('#sheet')).trim()), `puzzle ${i} opens with a one-line goal`); await p.click('#sheet [data-a="close"]'); ok(/^(Escape this turn!|Defeat .+ in 2 turns!)$/.test(await p.textContent('#goal')), 'goal stays on screen');
     ok(await p.evaluate(() => M.G.S.wiz[0] !== M.G.S.wiz[1]), 'puzzle is not a mirror match');
     await playOut(() => { const G = M.G; for (let k = 0; k < G.req.opts.length; k++) if (forcedWin(G.snap, G.decs.concat(k), 0, {n: 60000}, G.S.cur === 0 ? 2 : 1)) return k; return 0; });
     await p.waitForTimeout(350); ok(/solved/i.test(await p.textContent('#sheet h2', {timeout: 3000}).catch(() => 'no result sheet')), `puzzle ${i} not solved by its winning line`);

@@ -55,7 +55,6 @@ body.mview{background:var(--out)}
 #loglive{flex:1 1 auto;overflow-y:auto;min-height:0}
 @container app (orientation:landscape) and (min-width:900px){#logpane{display:flex} #ticker{display:none} #mebar [data-a="log"]{display:none}}
 #goal{flex:none;text-align:center;background:var(--gold);color:#3b0c18;font-weight:800;border-radius:10px;padding:5px 10px;line-height:1.25}
-#goal small{display:block;font-weight:600;font-size:.82em}
 #wingrow{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 10px;font-size:.82rem;min-height:26px}
 #wingrow .wings{display:flex;gap:2px;align-items:center}
 #wingrow .wing{width:clamp(15px,2cqw,24px);aspect-ratio:1;display:block}
@@ -256,9 +255,9 @@ function startMatch(cfg) {
   M = {G, cfg, busy: false, fresh: true, id: Date.now()};
   $('#ticker').textContent = ''; show('game'); closeOv();
   const ge = $('#goal'); ge.hidden = !cfg.puzzle;
-  if (cfg.puzzle) { const g = puzzleGoal(cfg.puzzle); ge.innerHTML = `${esc(g.head)}<small>${esc(g.rules)}</small>`; }
+  if (cfg.puzzle) ge.textContent = puzzleGoal(cfg.puzzle);
   saveMatch(); render(); pump();
-  if (cfg.puzzle) { const g = puzzleGoal(cfg.puzzle), n = PUZZLES.indexOf(cfg.puzzle) + 1; openOv(`<h2>Puzzle ${n}: ${esc(g.head)}</h2><p style="margin:0">${esc(g.how)}</p><p style="margin:0">${esc(g.rules)}</p><div class="acts"><button class="btn pri" data-a="close" autofocus>Start</button></div>`); }
+  if (cfg.puzzle) openOv(`<h2 style="text-align:center">Puzzle ${PUZZLES.indexOf(cfg.puzzle) + 1}</h2><p style="margin:0;text-align:center;font-size:1.3rem;font-weight:800">${esc(puzzleGoal(cfg.puzzle))}</p><div class="acts"><button class="btn pri" data-a="close" autofocus>Start</button></div>`);
 }
 function saveMatch() { if (!M || M.G.over || M.cfg.puzzle) return; store.set('db_save', JSON.stringify({snap: M.G.snap, decs: M.G.decs, cfg: M.cfg})); }
 function resumeMatch() {
@@ -482,7 +481,7 @@ function finish(puzzleFail) {
   if (cfg.puzzle) {
     if (won) { P.pz[cfg.puzzle.id] = 1; if (PUZZLES.every(z => P.pz[z.id])) grant('pz', got); }
     const next = PUZZLES.find(z => !P.pz[z.id]);
-    extra = won ? '<p>Solved. Your opponent had no way out.</p>' : `<p>Not solved: ${S.winner === 1 ? 'you were pounced' : 'your opponent slipped away'}. A forced win is there; try a different line.</p>`;
+    extra = won ? '' : `<p>${S.winner === 1 ? 'You were pounced.' : cfg.puzzle.goal === 'escape' ? 'You didn’t escape.' : esc(WIZ[S.wiz[1]].s) + ' got away.'}</p>`;
     acts = (won ? (next ? `<button class="btn pri" data-a="pzgo" data-id="${next.id}" autofocus>Next puzzle</button>` : '') : '<button class="btn pri" data-a="again" autofocus>Try again</button>') + '<button class="btn" data-a="play">Puzzle list</button>';
   } else {
     const k = cfg.mode + ':' + (cfg.level || ''), st = P.st[k] = P.st[k] || {w: 0, l: 0}; won ? st.w++ : st.l++;
@@ -542,12 +541,11 @@ function launch() {
 }
 function tourGo() { const T = P.tour, lv = T.level, up = {easy: 'normal', normal: 'hard', hard: 'expert', expert: 'expert'}; startMatch({mode: 'tour', wiz: [T.wiz, tourOpp(T)], level: T.round === 2 ? up[lv] : lv, ed: T.ed === 1 ? 1 : 2}); }
 function rankGo() { const r = rankOf(P.elo), oppElo = Math.max(700, P.elo + Math.round((Math.random() - .5) * 160)), ro = rankOf(oppElo); startMatch({mode: 'ranked', ed: P.opt.ed2 ? 2 : 1, wiz: [P.opt.wiz, randWiz(P.opt.wiz)], level: levelForRank(ro), oppElo, oppName: BOTS[Math.floor(Math.random() * BOTS.length)] + ' (' + oppElo + ')'}); }
-/* What a puzzle asks for, in words. goal: 'escape' = you can win outright this turn; 'trap' = you win on the opponent's turn. */
+/* What a puzzle asks for: one short line. 'escape' = you can win outright this turn; 'trap' = the opponent is
+   pounced at the end of their reply, so the win comes on turn 2. */
 function puzzleGoal(z) {
-  const opp = WIZ[z.snap.wiz[1]].s, goal = z.goal || (forcedWin(z.snap, [], 0, {n: 60000}, 1) ? 'escape' : 'trap');
-  return goal === 'escape'
-    ? {head: 'Escape this turn!', how: 'Get onto an Exit tile (the orange tiles at the end away from the Dragon) and then start a MOVE while standing there.', rules: `You have this one turn. ${opp}’s hand is face-up.`}
-    : {head: `Get ${opp} pounced on their next turn!`, how: `Play your turn so that ${opp} ends their own turn on a Threatened tile (the orange tiles on the Dragon’s side), whatever they do. You can’t escape this turn.`, rules: `You have this one turn, then ${opp} takes one and defends as well as possible. Their hand is face-up.`};
+  const goal = z.goal || (forcedWin(z.snap, [], 0, {n: 60000}, 1) ? 'escape' : 'trap');
+  return goal === 'escape' ? 'Escape this turn!' : `Defeat ${WIZ[z.snap.wiz[1]].s} in 2 turns!`;
 }
 function puzzleGo(id) { const z = PUZZLES.find(x => x.id === +id); startMatch({mode: 'puzzle', puzzle: z, wiz: z.snap.wiz, level: 'expert'}); }
 
@@ -576,8 +574,8 @@ function drawSetup() {
     h += `<div class="info"><b>${d.day}</b> · You are <b>${esc(WIZ[d.wiz[0]].n)}</b> against <b>${esc(WIZ[d.wiz[1]].n)}</b> (${LEVEL_NAMES[d.level]} CPU). Everyone gets the same Wizards and the same shuffle today, with 2nd Edition rules.<br>${rec ? `Today: <b>${rec === 'W' ? 'Won' : 'Lost'}</b>.` : 'Not played yet.'} Streak: ${dailyStreak()}.</div>
       <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">${rec ? 'Replay for fun' : 'Play today’s challenge'}</button></div>${wizInfo(d.wiz[0])}${wizInfo(d.wiz[1])}`;
   } else {
-    h += `<p class="lbl" style="margin:0">You get one turn. Each puzzle says what to do with it: escape this turn, or leave your opponent no way to avoid being pounced on their next turn. Their hand is shown face-up.</p>
-      <div class="picks">${PUZZLES.map((z, i) => `<button class="pick" data-a="pzgo" data-id="${z.id}"><img src="${face(z.snap.wiz[0])}" alt=""><div><b>${P.pz[z.id] ? '✓ ' : ''}Puzzle ${i + 1}</b><span>${z.goal === 'escape' ? 'Escape' : 'Trap ' + esc(WIZ[z.snap.wiz[1]].s)} · ${z.level}</span></div></button>`).join('') || '<span class="lbl">No puzzles yet.</span>'}</div>`;
+    h += `<p class="lbl" style="margin:0">Each puzzle has one goal, shown at the top of the screen.</p>
+      <div class="picks">${PUZZLES.map((z, i) => `<button class="pick" data-a="pzgo" data-id="${z.id}"><img src="${face(z.snap.wiz[0])}" alt=""><div><b>${P.pz[z.id] ? '✓ ' : ''}Puzzle ${i + 1}</b><span>${esc(puzzleGoal(z))}</span></div></button>`).join('') || '<span class="lbl">No puzzles yet.</span>'}</div>`;
   }
   $('#setupbody').innerHTML = h;
 }
