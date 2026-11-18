@@ -14,7 +14,7 @@ Open `www/index.html` (or `source/dist/dragonbridge.html`) in a browser to play.
 
 - Undo for your own choices this turn, until something hidden is revealed. Mobile View (Options) plays in a phone-shaped portrait layout on any screen.
 
-Not ported from Spellstorm yet: online play and accounts, the Linux / Steam / Reddit builds, in-app updates, translations, controller prompts, replays.
+Not ported from Spellstorm yet: online play, the Linux / Steam / Reddit builds, translations, controller prompts, replays.
 Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-player). Mirror matches (both players as the same Wizard) are not offered anywhere.
 
 - Optional account (Options → Account): sign in to keep stats, Ranked ratings, achievements, puzzles and settings in sync across devices. See "Accounts and sync" below.
@@ -63,14 +63,14 @@ App icons and splash screens come from `source/tools/make_branding.py`.
 
 ## Accounts and sync
 
-Signing in is optional and works the way it does in Spellstorm, with the same Supabase project, so a player has one account for both games. Dragon Bridge keeps its save data in its own table, `dragonbridge_saves`: one private row per account.
+Signing in is optional and works the way it does in Spellstorm. Dragon Bridge has its own Supabase project ("dragonbridge"), so its accounts are separate from Spellstorm's. Save data is in the table `dragonbridge_saves`: one private row per account.
 
-**One-time setup:** open the Supabase project → SQL Editor, paste `docs/supabase_setup.sql` and run it. Until that table exists, signing in works but the game says "Account sync isn't switched on for Dragon Bridge yet" and keeps progress on the device.
+**One-time setup (done for the current project):** open the Supabase project → SQL Editor, paste `docs/supabase_setup.sql` and run it. Until that table exists, signing in works but the game says "Account sync isn't switched on for Dragon Bridge yet" and keeps progress on the device.
 
 - What syncs: stats, Ranked ratings, achievements, trophies, puzzles, Daily results, a Tournament in progress, and most options. Mobile View and Sound stay per device. A match in progress stays on the device.
 - If two devices both played before syncing, the results are merged: wins, losses and games add up; ratings and settings take the more recent value; achievements keep their earliest date.
 - Signing out leaves everything in the account and returns the device to a fresh guest profile. "Erase all progress" while signed in also empties the account's copy.
-- The project URL, publishable key and table name are at `SUPA` in `source/template.html`. To use a separate Supabase project, change them there and run the same SQL in that project.
+- The project URL, publishable key and table name are at `SUPA` in `source/template.html`. To move to another Supabase project, change them there and run the same SQL in that project.
 - Password-reset and confirmation emails come from that Supabase project, so they use its email templates and its Site URL (Authentication → URL Configuration).
 - Sync is on in the apps, the itch.io page and `dist/dragonbridge.html`. It is off in `dist/page.html` (the claude.ai version), which has no network access.
 

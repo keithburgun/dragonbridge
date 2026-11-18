@@ -11,7 +11,7 @@ Your profile, settings, achievements, puzzle progress, Ranked ratings and any ma
 
 ## Optional features that send data
 
-**Account sync (optional).** If you choose to sign in, you give an email address and a password. The account keeps your progress in sync across devices, and it is the same account as in Spellstorm. We store your email address and your save data: stats, Ranked ratings, achievements, puzzle and Daily Challenge results, and settings. This runs on [Supabase](https://supabase.com/privacy), which acts as our data processor. Passwords are handled by Supabase's authentication service, and we never see them. If you don't sign in, nothing is sent.
+**Account sync (optional).** If you choose to sign in, you give an email address and a password. The account keeps your progress in sync across devices. We store your email address and your save data: stats, Ranked ratings, achievements, puzzle and Daily Challenge results, and settings. This runs on [Supabase](https://supabase.com/privacy), which acts as our data processor. Passwords are handled by Supabase's authentication service, and we never see them. If you don't sign in, nothing is sent.
 
 **Update checks (Android and Windows versions only).** Before telling you about a new version, the game asks GitHub for the latest release number, and downloads the update from GitHub if you choose to install it. GitHub sees your IP address, as with any web request.
 
@@ -24,7 +24,7 @@ Your profile, settings, achievements, puzzle progress, Ranked ratings and any ma
 
 ## Your choices and rights
 
-You can play without an account. To delete your account and the save data we hold, email [keithburgungames@gmail.com](mailto:keithburgungames@gmail.com) from the address on the account, and we will delete it within 30 days. Because the account is shared with Spellstorm, tell us if you want only your Dragon Bridge data removed. You can also ask us for a copy of your data, or for corrections. Depending on where you live (for example under the GDPR or the CCPA), you may have further rights, and we honor them on request. To remove your local data, uninstall the game or use "Erase all progress" in Options.
+You can play without an account. To delete your account and the save data we hold, email [keithburgungames@gmail.com](mailto:keithburgungames@gmail.com) from the address on the account, and we will delete it within 30 days. You can also ask us for a copy of your data, or for corrections. Depending on where you live (for example under the GDPR or the CCPA), you may have further rights, and we honor them on request. To remove your local data, uninstall the game or use "Erase all progress" in Options.
 
 ## Children
 

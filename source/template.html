@@ -799,8 +799,9 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#
    progress) and most options sync to one private row per account. If two devices both changed things, a three-way merge
    against the last synced copy keeps what each of them earned. Only the full builds turn this on (window.DB_SYNC, set by
    build.py); the version embedded on claude.ai cannot reach the service.
-   The account is the same one Spellstorm uses (same Supabase project); Dragon Bridge keeps its own table. */
-const SUPA = Object.assign({url: 'https://bdncsprakdvvmfnxxlqr.supabase.co', key: 'sb_publishable_y_mJp1WbutYXVPPKbrl1lQ_4vpZ5GqN', table: 'dragonbridge_saves'}, window.DB_SUPA_CFG || {});
+   Dragon Bridge has its own Supabase project ("dragonbridge"), so its accounts are separate from Spellstorm's.
+   The key below is the publishable one: it is meant to be shipped, and each player can only reach their own row. */
+const SUPA = Object.assign({url: 'https://niqyeqeqntwkrbkgnidj.supabase.co', key: 'sb_publishable_PFVNPc82dBxBX4zle9s-0A_Xekp2lJt', table: 'dragonbridge_saves'}, window.DB_SUPA_CFG || {});
 const OPT_LOCAL = ['mview', 'sound'];   // these stay per device
 const SYNC = (() => {
   const AKEY = 'db_auth', YKEY = 'db_sync';
@@ -949,7 +950,7 @@ let toastT = 0;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 3800); }
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 function acctSheet(msg, ok) {
-  openOv(`<h2>Your account</h2><p class="lbl" style="margin:0">Sign in on each device to keep your stats, Ranked ratings, achievements, puzzles and settings in sync. It is the same account as in Spellstorm, so if you have one there, sign in with it here.</p>
+  openOv(`<h2>Your account</h2><p class="lbl" style="margin:0">Sign in on each device to keep your stats, Ranked ratings, achievements, puzzles and settings in sync. New here? Enter an email and a password, then choose Create account.</p>
     <div class="acctform"><label>Email<input id="acem" type="email" autocomplete="email" inputmode="email" value="${esc(acctSheet.em || '')}"></label><label>Password<input id="acpw" type="password" autocomplete="current-password" minlength="6"></label>
     ${msg ? `<p class="${ok ? 'acok' : 'acerr'}" role="alert">${esc(msg)}</p>` : ''}</div>
     <div class="acts"><button class="btn pri" data-a="acctgo">Sign in</button><button class="btn" data-a="acctnew">Create account</button></div>

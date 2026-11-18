@@ -1,8 +1,8 @@
 -- Dragon Bridge account sync: run this once in the Supabase project the game points at
 -- (Dashboard → SQL Editor → New query → paste → Run). It is safe to run again.
 --
--- The game uses the same Supabase project as Spellstorm, so players have one account for both games.
--- This adds Dragon Bridge's own table: one private row of save data per account.
+-- Dragon Bridge has its own Supabase project ("dragonbridge"). This creates its table:
+-- one private row of save data per account.
 
 create table if not exists public.dragonbridge_saves (
   user_id    uuid primary key references auth.users (id) on delete cascade,
