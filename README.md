@@ -66,6 +66,7 @@ App icons and splash screens come from `source/tools/make_branding.py`.
     node tests/ed2.js                      # each 2nd Edition card change
     node tests/browser_ed.js               # the 2nd Edition setting in a browser
     node tests/known.js                    # Insight / Shockwave reveals and which cards stay known
+    node tests/browser_drama.js            # slides, the Dragon's Flight arc, escape and pounce endings
     node tests/browser_view.js             # Mobile View and Undo
     node tests/browser_ui.js               # drag-to-play, hover preview, Buy / Hack menus, side log
 

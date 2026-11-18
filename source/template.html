@@ -94,13 +94,17 @@ body.mview{background:var(--out)}
 .tile.can.mv{background:#0a2a9c99;box-shadow:inset 0 0 0 3px #86b4ff;animation:pulseb 1.1s infinite alternate}
 .tile.can.mv:hover,.tile.can.mv:focus-visible{background:#2f6bffcc}
 @keyframes pulseb{from{background:#0a2a9c77}to{background:#1746d6b0}}
-.tok{position:absolute;width:var(--tok);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--teal);box-shadow:0 3px 8px #000c;transition:left .55s cubic-bezier(.3,1.4,.5,1),opacity .4s;pointer-events:none;z-index:3;background:#000}
+.tok{position:absolute;width:var(--tok);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--teal);box-shadow:0 3px 8px #000c;transition:left .6s cubic-bezier(.3,1.25,.5,1),opacity .4s,filter .3s;pointer-events:none;z-index:3;background:#000}
+.tok.squash{filter:grayscale(1) brightness(.55)} .tok.squash img{transform:scale(.8) rotate(-12deg);transition:transform .2s}
+#bridge.shake{animation:shake .5s} @keyframes shake{10%,50%,90%{transform:translate(-5px,3px)}30%,70%{transform:translate(5px,-3px)}}
 .tok img{width:100%;height:100%;border-radius:50%;display:block}
 .tok.opp{border-color:var(--orange)} .tok.me{top:73%} .tok.opp{top:27%}
 .tok.off{opacity:.25}
 .tok .you{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);font:800 .6rem/1 var(--body);background:var(--teal);color:#00201f;padding:1px 4px;border-radius:4px}
 .tok.opp .you{background:var(--orange);bottom:auto;top:-13px}
-#dragon{position:absolute;top:50%;left:0;width:var(--dw);transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;transition:left 1.1s cubic-bezier(.5,0,.3,1),translate 1.1s cubic-bezier(.5,0,.3,1);z-index:4}
+#dragon{position:absolute;top:50%;left:0;width:var(--dw);transform:translateY(-50%);z-index:4}
+#dragon.flying #dpower{visibility:hidden}
+#dragon .dfly{display:flex;flex-direction:column;align-items:center;gap:4px}   /* the part that flies and pounces */
 #dragon.s1{left:100%;translate:-100% 0}
 #dragon .dface{width:100%;aspect-ratio:1;border-radius:50%;border:4px solid var(--bad);box-shadow:0 0 22px #ff3b3b99,0 4px 10px #000c;background:none;padding:0;cursor:pointer}
 #dragon .dface img{width:100%;height:100%;border-radius:50%;display:block}
@@ -137,6 +141,8 @@ body.mview{background:var(--out)}
 #splash b{display:block;margin-top:6px;background:#000c;border-radius:8px;padding:2px 8px}
 #banner{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:41;font:italic 700 clamp(2rem,8cqw,4rem)/1 var(--disp);color:var(--gold);text-shadow:0 4px 0 #7a2a12,0 0 30px #000;opacity:0;pointer-events:none;transition:opacity .3s;text-align:center}
 #banner.on{opacity:1}
+#banner div{white-space:nowrap} #banner .l2{font-size:1.25em;color:#fff3df;margin-top:.15em;animation:pop .45s cubic-bezier(.3,1.6,.5,1)} @keyframes pop{from{transform:scale(.3);opacity:0}}
+#banner.big{top:40%;font-size:clamp(1.5rem,6.2cqw,3.4rem);background:radial-gradient(closest-side,#000d 55%,#0000);padding:1.4em 2.4em}
 #coach{position:fixed;left:50%;bottom:calc(var(--card)*1.36 + 90px);transform:translateX(-50%);z-index:45;background:#fff3df;color:#2a0710;border-radius:14px;padding:10px 14px;max-width:min(92cqw,520px);box-shadow:0 10px 30px #000c;border:3px solid var(--gold2)}
 #coach p{margin:0 0 8px}
 .log{font-size:.88rem;display:flex;flex-direction:column;gap:2px} .log .t{color:var(--gold);font-weight:800;margin-top:6px}
@@ -151,7 +157,7 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
 @container app (max-width:640px){
   .iconbtn{margin-left:2px;padding:.3em .5em;font-size:.85rem} .bar{gap:5px}
   body{font-size:14px} #table{gap:5px} .slot{padding:3px 4px} .slot h4{font-size:.58rem;letter-spacing:.04em}
-  .bar .who span{display:none} #bridgewrap{padding-inline:0;padding-top:calc(var(--dw)*1.05)} #dragon{top:0;transform:none;flex-direction:row;width:auto} #dragon.s1{flex-direction:row-reverse} #dragon .dface{width:var(--dw)} #dpower .cardb img{width:calc(var(--dw)*.7)} #bridge{aspect-ratio:1890/620}
+  .bar .who span{display:none} #bridgewrap{padding-inline:0;padding-top:calc(var(--dw)*1.05)} #dragon{top:0;transform:none;width:auto} #dragon .dfly{flex-direction:row} #dragon.s1 .dfly{flex-direction:row-reverse} #dragon .dface{width:var(--dw)} #dpower .cardb img{width:calc(var(--dw)*.7)} #bridge{aspect-ratio:1890/620}
   #app > *{--card:22.5cqw;--mini:10.2cqw;--tok:6.2cqw;--dw:11cqw} #hand{gap:3px}
 }
 @container app (max-height:560px){#app > *{--card:clamp(64px,19cqh,120px);--mini:clamp(30px,8.5cqh,56px)} #prompt{min-height:40px}}
@@ -180,7 +186,7 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
       <div id="goal" hidden></div>
       <div class="bar opp" id="oppbar"></div>
       <div id="wingrow"></div>
-      <div id="bridgewrap"><div id="bridge"></div><div id="dragon"><button class="dface" data-a="zoomdragon" data-peek="dragon" aria-label="The Dragon"><img alt=""></button><span id="dpower"></span></div></div>
+      <div id="bridgewrap"><div id="bridge"></div><div id="dragon"><div class="dfly"><button class="dface" data-a="zoomdragon" data-peek="dragon" aria-label="The Dragon"><img alt=""></button><span id="dpower"></span></div></div></div>
       <div id="table"></div>
       <div id="prompt"><div id="ticker" aria-live="polite"></div><div class="q" id="q"></div><div class="opts" id="opts"></div></div>
       <div id="hand"></div>
@@ -224,7 +230,21 @@ function beep(f, d = .09, type = 'triangle', v = .07, slide = 0) {
   if (!P.opt.sound) return;
   try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; if (slide) o.frequency.linearRampToValueAtTime(f + slide, AC.currentTime + d); g.gain.value = v; g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + d); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime + d); } catch (e) {}
 }
-const SFX = {card: () => beep(520, .08), move: () => beep(340, .12, 'sine', .08, 160), bump: () => beep(160, .16, 'square', .06, -70), gem: () => beep(880, .1, 'sine', .06, 220), flight: () => { beep(120, .5, 'sawtooth', .07, 260); }, win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .18), i * 120)), lose: () => [330, 262, 196].forEach((f, i) => setTimeout(() => beep(f, .25, 'sawtooth', .05), i * 160))};
+function roar() {   // a synth dragon roar: two detuned low oscillators with a growl, plus a breath of noise
+  if (!P.opt.sound) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const t = AC.currentTime, d = 1.5, out = AC.createGain(), lp = AC.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(1100, t); lp.frequency.exponentialRampToValueAtTime(240, t + d);
+    out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.3, t + 0.1); out.gain.setValueAtTime(0.3, t + 0.55); out.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.setValueAtTime(31, t); lfo.frequency.linearRampToValueAtTime(17, t + d); lg.gain.value = 0.13; lfo.connect(lg).connect(out.gain);
+    for (const [type, f0, f1] of [['sawtooth', 150, 46], ['square', 76, 33], ['sawtooth', 113, 39]]) { const o = AC.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d); o.connect(lp); o.start(t); o.stop(t + d); }
+    const nb = AC.createBuffer(1, AC.sampleRate * d, AC.sampleRate), ch = nb.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
+    const ns = AC.createBufferSource(), ng = AC.createGain(), bp = AC.createBiquadFilter(); ns.buffer = nb; bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 0.7; ng.gain.value = 0.5; ns.connect(bp).connect(ng).connect(out); ns.start(t);
+    lp.connect(out).connect(AC.destination); lfo.start(t); lfo.stop(t + d);
+  } catch (e) {}
+}
+function steps(n, gap) { for (let i = 0; i < n; i++) setTimeout(() => { beep(i % 2 ? 96 : 118, .07, 'triangle', .16 * (1 - i / (n * 1.4)), -30); beep(900, .02, 'square', .015); }, i * gap); }   // footsteps fading into the distance
+const SFX = {card: () => beep(520, .08), move: () => beep(340, .12, 'sine', .08, 160), bump: () => beep(160, .16, 'square', .06, -70), gem: () => beep(880, .1, 'sine', .06, 220), flight: roar, win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .18), i * 120)), lose: () => [330, 262, 196].forEach((f, i) => setTimeout(() => beep(f, .25, 'sawtooth', .05), i * 160))};
 
 /* ---------- screens and overlays ---------- */
 function show(id) { for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id; if (id !== 'game') { $('#coach').hidden = true; } }
@@ -252,7 +272,7 @@ function startMatch(cfg) {
   let G;
   if (cfg.puzzle) { G = Game.resume(cfg.puzzle.snap, [], []); }
   else { const S = newState({wiz: cfg.wiz, seed: cfg.seed, first: cfg.first, names: namesFor(cfg.wiz), ed: cfg.ed === 1 ? 1 : 2}); G = new Game(S); }
-  M = {G, cfg, busy: false, fresh: true, id: Date.now()};
+  M = {G, cfg, busy: false, fresh: true, id: Date.now()}; resetStage();
   $('#ticker').textContent = ''; show('game'); closeOv();
   const ge = $('#goal'); ge.hidden = !cfg.puzzle;
   if (cfg.puzzle) ge.textContent = puzzleGoal(cfg.puzzle);
@@ -261,13 +281,13 @@ function startMatch(cfg) {
 }
 function saveMatch() { if (!M || M.G.over || M.cfg.puzzle) return; store.set('db_save', JSON.stringify({snap: M.G.snap, decs: M.G.decs, cfg: M.cfg})); }
 function resumeMatch() {
-  try { const j = JSON.parse(store.get('db_save')); const G = Game.resume(j.snap, j.decs, []); M = {G, cfg: j.cfg, busy: false, fresh: true, id: Date.now()}; $('#ticker').textContent = ''; show('game'); render(); pump(); }
+  try { const j = JSON.parse(store.get('db_save')); const G = Game.resume(j.snap, j.decs, []); M = {G, cfg: j.cfg, busy: false, fresh: true, id: Date.now()}; resetStage(); $('#ticker').textContent = ''; show('game'); render(); pump(); }
   catch (e) { store.del('db_save'); toTitle(); }
 }
 const speed = () => M && M.cfg.fast ? 0 : (P.opt.speed ?? 1);
 function pump() {
   const G = M.G;
-  if (G.over) { render(); return finish(); }
+  if (G.over) { render(); return drama(() => finish()); }
   const q = G.req;
   if (M.cfg.puzzle && G.S.turn > M.cfg.puzzle.turn + 1) { render(); return finish(true); }
   render();
@@ -288,15 +308,17 @@ function answer(i) {
     if (e.card && e.by !== HUMAN) { splash(e.card, e.m); wait = Math.max(wait, 950); SFX.card(); }
     else if (e.card) SFX.card();
     if (/ bumps /.test(e.m)) SFX.bump(); else if (/ moves | teleports /.test(e.m)) SFX.move(); else if (/readies|depletes/.test(e.m)) SFX.gem();
-    if (/^FLIGHT/.test(e.m)) { banner('Flight!'); SFX.flight(); wait = Math.max(wait, 1300); } else if (/^ROOST/.test(e.m)) { banner('Roost'); wait = Math.max(wait, 900); }
+    if (/^FLIGHT/.test(e.m)) { banner('Flight!'); SFX.flight(); wait = Math.max(wait, 1700); } else if (/^ROOST/.test(e.m)) { banner('Roost'); wait = Math.max(wait, 900); }
   }
+  if ((S.pos[0] !== pos0[0] || S.pos[1] !== pos0[1]) && (G.over || G.req && G.req.p !== HUMAN)) wait = Math.max(wait, 600);   // let the slide finish before the CPU acts
+  if (G.over) wait = 0;   // the ending plays itself out
   if (fresh.length) $('#ticker').textContent = fresh.filter(e => !/^—/.test(e.m)).slice(-2).map(e => e.m).join(' ');
   saveMatch();
   if (wait && speed()) { render(); M.busy = true; const G0 = G; setTimeout(() => { if (!M || M.G !== G0) return; M.busy = false; pump(); }, wait * speed()); } else pump();
 }
 let splashT = 0, bannerT = 0;
 function splash(card, text) { if (!speed()) return; const s = $('#splash'); s.querySelector('img').src = im(card); s.querySelector('b').textContent = text; s.classList.add('on'); clearTimeout(splashT); splashT = setTimeout(() => s.classList.remove('on'), 900 * speed()); }
-function banner(t) { if (!speed()) return; const b = $('#banner'); b.textContent = t; b.classList.add('on'); clearTimeout(bannerT); bannerT = setTimeout(() => b.classList.remove('on'), 1200 * speed()); }
+function banner(t) { if (!speed()) return; const b = $('#banner'); b.className = ''; b.textContent = t; b.classList.add('on'); clearTimeout(bannerT); bannerT = setTimeout(() => b.classList.remove('on'), 1200 * speed()); }
 
 /* ---------- drawing the match ---------- */
 function gemsHtml(S, p) {
@@ -352,13 +374,17 @@ function render() {
   const old = br.querySelectorAll('.tok');
   if (old.length === 2 && br.dataset.w === S.wiz.join()) { const keep = [...old]; br.querySelectorAll(':scope > :not(.tok)').forEach(e => e.remove()); const tmp = document.createElement('div'); tmp.innerHTML = b; [...tmp.children].forEach(e => { if (!e.classList.contains('tok')) br.insertBefore(e, keep[0]); }); [1, 0].forEach((p, k) => { keep[k].style.left = (S.pos[p] + .5) * 4.762 + '%'; keep[k].classList.toggle('off', !!S.away[p]); keep[k].querySelector('img').src = face(S.wiz[p]); }); }
   else { br.innerHTML = b; br.dataset.w = S.wiz.join(); }
-  const dg = $('#dragon'), side = String(S.dragon);
-  if (dg.dataset.side !== side) {   // sliding across the bridge: don't let it catch taps meant for tiles
-    const jump = M.fresh; dg.style.transition = jump ? 'none' : ''; dg.style.pointerEvents = 'none'; dg.dataset.side = side;
-    setTimeout(() => { dg.style.pointerEvents = ''; dg.style.transition = ''; }, jump ? 50 : 1200);
+  const dg = $('#dragon'), side = String(S.dragon), fly = dg.querySelector('.dfly');
+  if (dg.dataset.side !== side) {
+    const r0 = fly.getBoundingClientRect(), jump = M.fresh || !speed();
+    dg.dataset.side = side; dg.classList.toggle('s1', S.dragon === 1);
+    if (!jump && fly.animate) {   // Flight: arc over the bridge to the other end (and don't catch taps meant for tiles on the way)
+      const r1 = fly.getBoundingClientRect(), ms = 1500 * speed();
+      dg.style.pointerEvents = 'none'; dg.classList.add('flying'); setTimeout(() => { dg.style.pointerEvents = ''; dg.classList.remove('flying'); }, ms);   // the new power card shows once it lands
+      fly.animate(arcFrames(r0.left - r1.left, r0.top - r1.top, 0, 0, $('#bridge').offsetHeight * 0.55, 1.3), {duration: ms, easing: 'linear'});
+    }
   }
   M.fresh = false;
-  dg.classList.toggle('s1', S.dragon === 1);
   // table
   const w = wings(S), need = flightNeed(S);
   const cardB = (kind, id, extra = '') => `<button class="cardb" data-a="zoom${kind}" data-id="${id}" data-peek="${kind === 'item' ? 'it_' : kind === 'hack' ? 'hk_' : ''}${id}" ${extra} aria-label="${esc((kind === 'item' ? ITEMS : kind === 'hack' ? HACKS : ACTIONS)[id].n)}"><img src="${cardImg(kind, id)}" alt=""></button>`;
@@ -432,6 +458,40 @@ function undo() {   // take back your last choice this turn (only offered while 
   if (!G2.req || G2.req.p !== HUMAN || G2.S.rev !== h.rev) { M.hist = []; return; }   // should not happen: replays are exact
   M.G = G2; M.sub = null; $('#ticker').textContent = 'Undone.'; $('#coach').hidden = true; saveMatch(); render();
 }
+/* Keyframes for a hop from (x0,y0) to (x1,y1) (px offsets from where the element sits), rising `lift` px on the way. */
+function arcFrames(x0, y0, x1, y1, lift, grow = 1.2) {
+  const f = [];
+  for (let k = 0; k <= 16; k++) { const t = k / 16, e = t * t * (3 - 2 * t), up = 4 * t * (1 - t); f.push({transform: `translate(${x0 + (x1 - x0) * e}px,${y0 + (y1 - y0) * e - lift * up}px) scale(${1 + (grow - 1) * up}) rotate(${Math.sin(t * Math.PI * 2) * 7}deg)`}); }
+  return f;
+}
+function resetStage() {   // undo whatever the last match's ending left on screen
+  const fly = $('#dragon .dfly'); if (fly.getAnimations) fly.getAnimations().forEach(a => a.cancel());
+  const br = $('#bridge'); br.dataset.w = ''; br.classList.remove('shake'); $('#dragon').style.zIndex = '';
+  clearTimeout(bannerT); const b = $('#banner'); b.className = ''; b.textContent = ''; b.style.left = '';
+}
+/* The end of a match, played out before the result sheet: an escape walks off the far end; a pounce brings the Dragon down. */
+function drama(done) {
+  const S = M.G.S, M0 = M, sp = speed(), w = S.winner, l = 1 - w;
+  if (!sp || w < 0 || (S.reason !== 'escape' && S.reason !== 'pounce')) return done();
+  M.busy = true;
+  const toks = [...$('#bridge').querySelectorAll('.tok')], tokOf = p => toks[p === 1 ? 0 : 1], T = (ms, f) => setTimeout(() => { if (M === M0) f(); }, ms * sp);
+  const nW = WIZ[S.wiz[w]].s, nL = WIZ[S.wiz[l]].s, b = $('#banner');
+  const mr = $('#main').getBoundingClientRect(), ar = $('#app').getBoundingClientRect(); b.style.left = (mr.left - ar.left + mr.width / 2) + 'px';   // centred over the board, not the log
+  const say = (a, c) => { clearTimeout(bannerT); b.className = 'on big'; b.innerHTML = `<div>${esc(a)}</div>` + (c ? `<div class="l2">${esc(c)}</div>` : ''); };
+  const end = t0 => { T(t0, () => say(S.reason === 'escape' ? `${nW} ESCAPES!` : `${nL} was POUNCED!`)); T(t0 + 1200, () => { say(S.reason === 'escape' ? `${nW} ESCAPES!` : `${nL} was POUNCED!`, `${nW} WINS!`); (w === HUMAN ? SFX.win : SFX.lose)(); }); T(t0 + 3200, () => { b.className = ''; b.style.left = ''; M.busy = false; done(); }); };
+  if (S.reason === 'escape') {
+    T(650, () => { const tk = tokOf(w); tk.style.transition = `left ${2.1 * sp}s linear, opacity ${2.1 * sp}s ease-in`; tk.style.left = (S.dragon === 0 ? 103 : -3) + '%'; tk.style.opacity = 0; steps(8, 250 * sp); });   // walks off the Exit end
+    end(2900);
+  } else {
+    T(650, () => {
+      const fly = $('#dragon .dfly'), a = fly.querySelector('.dface').getBoundingClientRect(), v = tokOf(l).getBoundingClientRect();
+      $('#dragon').style.zIndex = 6;
+      if (fly.animate) fly.animate(arcFrames(0, 0, v.left + v.width / 2 - a.left - a.width / 2, v.top + v.height / 2 - a.top - a.height / 2, $('#bridge').offsetHeight * 0.8, 1.3), {duration: 750 * sp, easing: 'linear', fill: 'forwards'});
+    });
+    T(1400, () => { roar(); $('#bridge').classList.add('shake'); tokOf(l).classList.add('squash'); });
+    end(2300);
+  }
+}
 function chooseCard(i) {   // a card-shaped option: zoom first so its text can be read, unless one-tap is on
   const o = M.G.req.opts[i], kind = o.item ? 'item' : o.hack ? 'hack' : 'card', id = o.card || o.item || o.hack;
   if (P.opt.oneTap) return answer(i);
@@ -476,7 +536,7 @@ function dailyStreak() { let n = 0; const d = new Date(); for (;;) { const k = d
 function finish(puzzleFail) {
   const S = M.G.S, cfg = M.cfg, won = S.winner === HUMAN && !puzzleFail, got = [];
   store.del('db_save');
-  (won ? SFX.win : SFX.lose)();
+  if (!speed() || (S.reason !== 'escape' && S.reason !== 'pounce') || puzzleFail) (won ? SFX.win : SFX.lose)();
   let extra = '', acts = '<button class="btn pri" data-a="again" autofocus>Play again</button>';
   if (cfg.puzzle) {
     if (won) { P.pz[cfg.puzzle.id] = 1; if (PUZZLES.every(z => P.pz[z.id])) grant('pz', got); }
@@ -508,10 +568,11 @@ function finish(puzzleFail) {
     if (cfg.tutorial) { P.tutDone = true; }
   }
   saveProf();
-  const head = cfg.puzzle ? (won ? 'Puzzle solved!' : 'Not this time') : won ? (S.reason === 'escape' ? 'You escaped!' : 'The Dragon pounces!') : S.winner < 0 ? 'Stalemate' : S.reason === 'resign' ? 'You resigned' : S.reason === 'escape' ? `${WIZ[S.wiz[1]].s} escaped` : 'You were pounced';
-  const sub = cfg.puzzle ? '' : won ? (S.reason === 'escape' ? 'You made it off the bridge.' : `${WIZ[S.wiz[1]].s} ended the Gem Phase on a Threatened tile.`) : S.winner < 0 ? 'Nobody got off the bridge.' : S.reason === 'resign' ? 'The match counts as a loss.' : S.reason === 'escape' ? 'Your opponent started a MOVE on an Exit tile.' : 'You ended your Gem Phase on a Threatened tile.';
+  const dec = S.winner === 0 || S.winner === 1, nW = dec ? WIZ[S.wiz[S.winner]].s : '', nL = dec ? WIZ[S.wiz[1 - S.winner]].s : '';   // (a failed puzzle has no winner)
+  const head = cfg.puzzle ? (won ? 'Puzzle solved!' : 'Not this time') : !dec ? 'Stalemate' : S.reason === 'resign' ? 'You resigned' : S.reason === 'escape' ? `${nW} ESCAPES!` : `${nL} was POUNCED!`;
+  const sub = cfg.puzzle ? '' : !dec ? 'Nobody got off the bridge.' : S.reason === 'resign' ? 'The match counts as a loss.' : `<b>${nW} WINS!</b> ${won ? 'That’s you.' : 'Better luck next time.'}`;
   const M0 = M;
-  setTimeout(() => M === M0 && openOv(`<h2>${head}</h2><p style="margin:0">${sub} <span class="lbl">${cfg.puzzle ? '' : S.turn + ' turns.'}</span></p>${extra}${got.map(a => `<div class="ach"><i>${a[1]}</i><div><b>Achievement: ${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}<div class="acts">${acts}<button class="btn" data-a="log">Match log</button><button class="btn" data-a="totitle">Title</button></div>`), 700 * (speed() || .2));
+  setTimeout(() => M === M0 && openOv(`<h2>${head}</h2><p style="margin:0">${sub} <span class="lbl">${cfg.puzzle ? '' : S.turn + ' turns.'}</span></p>${extra}${got.map(a => `<div class="ach"><i>${a[1]}</i><div><b>Achievement: ${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}<div class="acts">${acts}<button class="btn" data-a="log">Match log</button><button class="btn" data-a="totitle">Title</button></div>`), speed() ? 250 : 140);
 }
 
 /* ---------- modes ---------- */
