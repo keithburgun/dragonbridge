@@ -117,8 +117,11 @@ function win(S, p, why) { S.winner = p; S.reason = why; log(S, why === 'escape' 
 /* S.known[p]: cards in p's hand that the other player has seen (revealed, or taken in the open). */
 function trimKnown(S) { for (let p = 0; p < 2; p++) { const h = S.hand[p].slice(); S.known[p] = S.known[p].filter(c => { const i = h.indexOf(c); if (i < 0) return false; h.splice(i, 1); return true; }); } }
 const know = (S, p, c) => { S.known[p].push(c); };
+/* S.rev counts moments when a player learned something hidden (a draw, a revealed hand, a new card turned up,
+   a choice made by the other player). The Undo button never goes back past one of those. */
 function* ask(S, p, kind, prompt, opts, extra) {
   trimKnown(S);
+  if (p !== S.cur) S.rev++;
   if (!opts.length) return null;
   if (opts.length === 1 && !(extra && extra.show)) return opts[0];
   const i = yield Object.assign({p, kind, prompt, opts}, extra);
@@ -146,11 +149,12 @@ function* gainItem(S, p, it, from) {
   if (isW(S, p, 'bunny') && S.items[p].length === 2 && !S.once[p]) { S.once[p] = 1; ready(S, p, 2); }
 }
 function* randomItem(S, p) {   // the top of the (shuffled) Item Deck
+  S.rev++;
   if (!S.itemDeck.length) return;
   yield* gainItem(S, p, S.itemDeck.pop(), null);
 }
 function* pickItem(S, p, prompt) {   // take an Item from the Market (or the top of the Item Deck if the Market is empty)
-  if (!S.market.length && S.itemDeck.length) S.market.push(S.itemDeck.pop());
+  if (!S.market.length && S.itemDeck.length) { S.market.push(S.itemDeck.pop()); S.rev++; }
   if (!S.market.length) return;
   const c = yield* ask(S, p, 'item', prompt || 'Choose an Item', S.market.map(it => ({item: it, label: ITEMS[it].n})));
   yield* gainItem(S, p, c.item, S.market);
@@ -260,7 +264,7 @@ const ACT = {
   *insight(S, p) {
     const o = cardOpts(S.hand[1 - p], {zone: 'opp'}).concat(cardOpts(S.nest, {zone: 'nest'}));
     log(S, `${nm(S, 1 - p)}’s hand is revealed: ${S.hand[1 - p].map(c => ACTIONS[c].n).join(', ') || 'no cards'}.`);
-    S.known[1 - p] = S.hand[1 - p].slice();
+    S.known[1 - p] = S.hand[1 - p].slice(); S.rev++;
     if (o.length) {
       const k = yield* ask(S, p, 'pick', `Insight: take a card from ${nm(S, 1 - p)}’s hand or from the Nest`, o, {show: 1, noDet: 1, reveal: 1});
       const from = k.zone === 'opp' ? S.hand[1 - p] : S.nest; from.splice(from.indexOf(k.card), 1); S.hand[p].push(k.card); know(S, p, k.card);
@@ -274,7 +278,7 @@ const ACT = {
     yield* bump(S, p, 2);
     const t = 1 - p, mv = [...new Set(S.hand[t].filter(c => ACTIONS[c].move))];
     if (mv.length) { const c = yield* ask(S, t, 'card', 'Shockwave: choose a MOVE card to shuffle into the deck', cardOpts(mv, {zone: 'hand'})); S.hand[t].splice(S.hand[t].indexOf(c.card), 1); S.deck.push(c.card); shuffle(S, S.deck); log(S, `${nm(S, t)} shuffles ${ACTIONS[c.card].n} into the deck.`); }
-    else { S.known[t] = S.hand[t].slice(); log(S, `${nm(S, t)} reveals a hand with no MOVE cards: ${S.hand[t].map(c => ACTIONS[c].n).join(', ') || 'no cards'}.`); }
+    else { S.rev++; S.known[t] = S.hand[t].slice(); log(S, `${nm(S, t)} reveals a hand with no MOVE cards: ${S.hand[t].map(c => ACTIONS[c].n).join(', ') || 'no cards'}.`); }
   },
   *checkmate(S, p) { yield* move(S, p, 2, {card: 1}); if (S.ready[p] > 0 && (yield* yn(S, p, 'Checkmate: deplete a Gem to Bump 3?', 'Deplete a Gem'))) { deplete(S, p, 1); yield* bump(S, p, 3); } },
 };
@@ -291,6 +295,7 @@ function* playCard(S, p, c, dest) {
   const t = 1 - p;
   if (ACTIONS[c].bump && isW(S, p, 'bill') && S.t.phase === 'action') {
     const give = [...new Set(S.hand[t].filter(x => ACTIONS[x].bump))];
+    S.rev++;
     const k = give.length ? yield* ask(S, t, 'card', `Bill Milton: give ${nm(S, p)} a BUMP card? If you don’t, Bill readies a Gem and Teleports 1.`, cardOpts(give, {zone: 'hand'}).concat({id: 'no', label: 'Give nothing'})) : {};
     if (k.card) { S.hand[t].splice(S.hand[t].indexOf(k.card), 1); S.hand[p].push(k.card); know(S, p, k.card); log(S, `${nm(S, t)} gives ${nm(S, p)} ${ACTIONS[k.card].n}.`); }
     else { ready(S, p, 1); yield* teleport(S, p, 1, {why: 'Bill Milton'}); }
@@ -314,6 +319,7 @@ const HACKFX = {
   *lullaby(S, p) {
     if (e2(S)) {
       const t = 1 - p, two = [...new Set(S.hand[t].filter(c => ACTIONS[c].w === 2))];
+      S.rev++;
       const k = two.length ? yield* ask(S, t, 'card', `chip tune lullaby: reveal and reshuffle a 2-Wing card? If you don’t, ${nm(S, p)} gains a free Item.`, cardOpts(two, {zone: 'hand'}).concat({id: 'no', label: 'Keep my cards'})) : {};
       if (k.card) { S.hand[t].splice(S.hand[t].indexOf(k.card), 1); S.deck.push(k.card); shuffle(S, S.deck); log(S, `${nm(S, t)} reveals ${ACTIONS[k.card].n} and shuffles it into the deck.`); }
       else yield* pickItem(S, p, 'chip tune lullaby: gain a free Item');
@@ -344,7 +350,7 @@ function* doHack(S, p, h, o = {}) {
     if (c.id === 'w') gainWhite(S, p, 1); else yield* teleport(S, p, 1, {why: 'May'});
   }
   const i = S.hacks.indexOf(h); if (i < 0) return;
-  const refill = () => { if (S.hackDeck.length) S.hacks.splice(i, 0, S.hackDeck.pop()); };
+  const refill = () => { if (S.hackDeck.length) { S.hacks.splice(i, 0, S.hackDeck.pop()); S.rev++; } };
   if (o.reshuffle) { S.hacks.splice(i, 1); S.hackDeck.push(h); shuffle(S, S.hackDeck); refill(); }
   else if (!e2(S) && (isW(S, p, 'may') || isW(S, p, 'robot'))) { S.hacks.splice(i, 1); S.hackDown[p].push(h); refill(); log(S, `${HACKS[h].n} is flipped face down.`); }
 }
@@ -381,7 +387,7 @@ function* gemPhase(S, p) {
     case 'ready': ready(S, p, 1); if (e2(S) && has(S, p, 'backpack') && dep(S, p) > 0) { log(S, 'Cool Backpack:'); ready(S, p, 1); } break;
     case 'maytake': {
       yield* bump(S, p, 1);
-      if (S.hand[opp].length) { const c = S.hand[opp].splice(Math.floor(rnd(S) * S.hand[opp].length), 1)[0]; S.hand[p].push(c); know(S, p, c); log(S, `${nm(S, opp)} gives ${nm(S, p)} a random card from their hand.`, {secret: c}); }
+      if (S.hand[opp].length) { S.rev++; const c = S.hand[opp].splice(Math.floor(rnd(S) * S.hand[opp].length), 1)[0]; S.hand[p].push(c); know(S, p, c); log(S, `${nm(S, opp)} gives ${nm(S, p)} a random card from their hand.`, {secret: c}); }
       break;
     }
     case 'buy': deplete(S, p, cost); yield* gainItem(S, p, c.item, S.market);
@@ -419,6 +425,7 @@ function* dragonCheck(S, p) {
     log(S, `ROOST. The Nest is shuffled into the deck; ${S.nest.length ? ACTIONS[S.nest[0]].n : 'nothing'} starts the new Nest.`);
   }
   if (!ev) return;
+  S.rev++;   // the shuffle, the new Nest card and the Market refill
   S.lastEv = ev;
   for (const q of order) {
     const hadGelf = S.gelf[q];
@@ -479,11 +486,12 @@ function* turn(S, p) {
   S.t.phase = 'draw';
   if (S.power === 'dart' && !S.away[p]) yield* teleport(S, p, 1, {dir: S.dragon === 0 ? 1 : -1, why: 'Dragon Power (Magic Dart)'});
   trimKnown(S);
-  let n = 0; while (S.hand[p].length < 4 && S.deck.length) { S.hand[p].push(S.deck.pop()); n++; }
+  let n = 0; while (S.hand[p].length < 4 && S.deck.length) { S.hand[p].push(S.deck.pop()); n++; S.rev++; }
   if (n) log(S, `${nm(S, p)} draws ${n} card${n > 1 ? 's' : ''}.`);
 }
 function* play(S) {
   if (!S.known) S.known = [[], []];
+  if (!S.rev) S.rev = 0;
   try {
     while (S.winner == null) {
       yield {kind: 'turn'};
@@ -515,7 +523,7 @@ class Game {
   constructor(S) { this.S = S; this.gen = play(S); this.req = null; this.snap = null; this.decs = []; this.step(); }
   step(v) {
     let r = this.gen.next(v);
-    while (!r.done && r.value.kind === 'turn') { this.snap = snapshot(this.S); this.decs = []; r = this.gen.next(); }
+    while (!r.done && r.value.kind === 'turn') { this.snap = snapshot(this.S); this.logAt = this.S.log ? this.S.log.length : 0; this.decs = []; r = this.gen.next(); }
     this.req = r.done ? null : r.value;
   }
   answer(i) { this.decs.push(i); this.step(i); }

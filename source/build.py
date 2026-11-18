@@ -7,9 +7,10 @@ Produces:
   dist/dragonbridge.html   the game as one self-contained web page (open it in a browser)
   ../www/index.html        the same file, where app packaging expects it
   dist/page.html           the page without the <html> wrapper (for hosts that add their own)
+  dist/dragonbridge-web.zip  index.html zipped, for itch.io's browser player
   tests/eng_all.js         the rules engine + CPU as a Node module, for the automated tests
 Needs only Python 3.9+ (no packages)."""
-import base64, datetime, json, os, re
+import base64, datetime, json, os, re, zipfile
 H = os.path.dirname(os.path.abspath(__file__))
 rd = lambda f: open(os.path.join(H, f), encoding='utf-8').read()
 def wr(f, s):
@@ -19,12 +20,19 @@ imgs = {}
 for f in sorted(os.listdir(os.path.join(H, 'img'))):
     if f.endswith('.webp'): imgs[f[:-5]] = 'data:image/webp;base64,' + base64.b64encode(open(os.path.join(H, 'img', f), 'rb').read()).decode()
 pages = len([k for k in imgs if k.startswith('manual_')])
+# The two typefaces are embedded so the game looks the same offline and inside the apps (SIL Open Font License).
+FONTS = [('Fira Sans', 400, 'normal', 'fira-sans-latin-400-normal'), ('Fira Sans', 600, 'normal', 'fira-sans-latin-600-normal'),
+         ('Fira Sans', 800, 'normal', 'fira-sans-latin-800-normal'), ('Cormorant Garamond', 700, 'italic', 'cormorant-garamond-latin-700-italic')]
+fontcss = ''.join("@font-face{font-family:'%s';font-weight:%d;font-style:%s;font-display:swap;src:url(data:font/woff2;base64,%s) format('woff2')}\n"
+                  % (fam, wt, st, base64.b64encode(open(os.path.join(H, 'fonts', f + '.woff2'), 'rb').read()).decode()) for fam, wt, st, f in FONTS)
 engine = rd('engine.js') + '\n' + rd('ai.js')
 ver = os.environ.get('DRAGONBRIDGE_VERSION') or datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
-page = (rd('template.html').replace('/*ENGINE*/', engine + '\nconst APP_VERSION = ' + json.dumps(ver) + ';')
+page = (rd('template.html').replace('/*FONTS*/', fontcss).replace('/*ENGINE*/', engine + '\nconst APP_VERSION = ' + json.dumps(ver) + ';')
         .replace('/*IMGS*/{}', json.dumps(imgs, separators=(',', ':'))).replace('/*MANUAL_PAGES*/0', str(pages))
         .replace('/*PUZZLES*/[]', rd('puzzles.json').strip()))
+os.makedirs(os.path.join(H, 'dist'), exist_ok=True)
 full = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>body{margin:0}[hidden]{display:none!important}</style>\n' + page + '\n</html>\n'
+with zipfile.ZipFile(os.path.join(H, 'dist', 'dragonbridge-web.zip'), 'w', zipfile.ZIP_DEFLATED) as z: z.writestr('index.html', full)
 wr('dist/page.html', page); wr('dist/dragonbridge.html', full); wr('../www/index.html', full)
 EXPORTS = 'ED2,itemText,hackText,wizLines,ACTIONS,DECK,ITEMS,HACKS,WIZ,WIZ_IDS,newState,Game,simulate,snapshot,checkState,evalS,aiChoose,LEVELS,play,clone,probe,forcedWin,puzzleReply,isExit,isThreat,wings,flightNeed'
 wr('tests/eng_all.js', engine + '\nmodule.exports={' + EXPORTS + '};\n')

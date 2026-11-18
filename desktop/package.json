@@ -1,0 +1,22 @@
+{
+  "name": "dragonbridge",
+  "productName": "Dragon Bridge",
+  "version": "1.0.0",
+  "description": "Dragon Bridge vs CPU",
+  "author": "Keith Burgun",
+  "main": "main.js",
+  "private": true,
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.dragonbridge.game",
+    "productName": "Dragon Bridge",
+    "files": ["main.js", "icon.ico", "icon.png", "app/**/*"],
+    "directories": { "output": "dist" },
+    "win": { "target": [{ "target": "portable", "arch": ["x64"] }], "icon": "icon.ico" },
+    "portable": { "artifactName": "DragonBridge-${version}.exe" },
+    "publish": null
+  }
+}

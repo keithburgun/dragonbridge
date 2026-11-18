@@ -1,4 +1,7 @@
 node_modules/
+android/
+desktop/app/
+desktop/dist/
 source/dist/
 source/tests/eng_all.js
 __pycache__/

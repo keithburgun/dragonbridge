@@ -56,3 +56,7 @@ New matches use the 2nd Edition cards unless "2nd Edition rules" is unticked on 
 | Accursed Loom | Its Bump gains no White Gem | |
 | Thunderbox | On Flight: Bump 2 | Its owner Bumps on any Flight and keeps the Item; the Dragon Check choice is gone. The Bump gains a White Gem |
 | chip tune lullaby | Opponent may reveal and reshuffle a 2-Wing card; if they don't, gain a free Item | 2-Wing cards: Fireball, Flame Arrow, Magic Dart, Transfer, Checkmate. The free Item is chosen from the Market |
+
+**Undo**
+- Undo takes back your own choices in the current turn, one at a time.
+- It stops at anything that showed hidden information or involved the other player: a card drawn, a revealed hand (Insight, Shockwave), a choice the opponent made (Shockwave, Bill, Lori, chip tune lullaby), a random card or Item, a new Hack or Market card turned up, a Roost or Flight. Choices made after such a moment can still be taken back, down to that moment.

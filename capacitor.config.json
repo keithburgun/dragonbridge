@@ -1,0 +1,6 @@
+{
+  "appId": "com.dragonbridge.game",
+  "appName": "Dragon Bridge",
+  "webDir": "www",
+  "android": { "backgroundColor": "#2a0710" }
+}
