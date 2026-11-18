@@ -11,9 +11,11 @@ function build(o) {
   const pool = E.DECK.slice(), take = c => { const i = pool.indexOf(c); if (i < 0) throw new Error(o.name + ': no ' + c + ' left'); pool.splice(i, 1); return c; };
   const S = E.newState({wiz: o.wiz, seed: 7, first: 0, ed: 2, names: o.wiz.map(w => E.WIZ[w].s)});
   S.hand = [o.hand.map(take), o.opp.map(take)]; S.nest = (o.nest || []).map(take); S.power = o.power ? take(o.power) : null;
-  // deck: the cards left to draw, in order (first listed is drawn first). When a puzzle gives one, no other cards
-  // exist in it: a small, fully known set keeps the puzzle about its lesson (and keeps the search small).
-  S.deck = o.deck ? o.deck.map(take).reverse() : pool;
+  // Normal rules throughout: both hands hold 4 cards, all 17 Action cards are in the game, and everyone draws back
+  // to 4. draws: the top of the deck, in the order it will be drawn (scripted, as part of the puzzle); the cards
+  // not named anywhere sit underneath in a fixed order.
+  if (S.hand[0].length !== 4 || S.hand[1].length !== 4) throw new Error(o.name + ': both hands must hold 4 cards');
+  const top = (o.draws || []).map(take); S.deck = pool.concat(top.reverse());
   S.pos = o.pos.slice(); S.dragon = o.dragon || 0; S.ready = (o.ready || [0, 0]).slice(); S.gems = (o.gems || [3, 3]).slice();
   S.white = (o.white || [0, 0]).slice(); S.supply = 8 - S.white[0] - S.white[1];
   const items = ALL_ITEMS.slice(), ti = x => { items.splice(items.indexOf(x), 1); return x; };
@@ -21,7 +23,7 @@ function build(o) {
   const hacks = ALL_HACKS.slice(), th = x => { hacks.splice(hacks.indexOf(x), 1); return x; };
   S.hacks = (o.hacks || ['lullaby', 'deals', 'mondo']).map(th); S.hackDeck = hacks;
   S.turn = o.turn || 6; S.started = 1; S.cur = 0; S.first = 0; S.log = undefined; S.known = [[], []]; S.rev = 0;
-  const bad = E.checkState(S); if (bad && !(o.deck && /^action cards/.test(bad))) throw new Error(o.name + ': ' + bad);
+  const bad = E.checkState(S); if (bad) throw new Error(o.name + ': ' + bad);
   return new E.Game(S).snap;
 }
 const label = o => o.label;
@@ -41,29 +43,31 @@ const PUZZLES = [
     need: [['Insight', o => o.card === 'insight' && o.zone === 'hand']] },
   { name: 'Green Means Go', goal: {type: 'escape', n: 3},
     // Two Gem teleports in two turns carry you to the Exit; the MOVE card has to be saved for the last turn.
-    wiz: ['robot', 'omar'], gems: [3, 2], pos: [12, 9], ready: [2, 0], hand: ['hop', 'transfer', 'soda'], opp: ['fireball'], nest: ['insight'], deck: [],
+    wiz: ['robot', 'omar'], gems: [3, 2], pos: [12, 9], ready: [2, 0], hand: ['hop', 'transfer', 'fireball', 'dart'], opp: ['leap', 'charge', 'charge', 'dazzle'], nest: ['insight'],
+    draws: ['shockwave', 'step', 'flamearrow', 'soda'],
     need: [['a Gem teleport on turn 1', (o, S) => o.act === 'tp' && S.turn === T1], ['a Gem teleport on turn 2', (o, S) => o.act === 'tp' && S.turn === T2]] },
   { name: 'Purple Patch', goal: {type: 'defeat', n: 2},
     // Eve (2nd Edition): start your turn on a purple tile for +2 Bump all turn.
-    wiz: ['eve', 'lori'], pos: [10, 7], hand: ['flamearrow', 'step', 'hop', 'dazzle'], opp: ['soda', 'bait'], nest: ['gale', 'shockwave'], deck: [],
-    need: [['ending turn 1 on a purple tile', (o, S, q) => q.kind === 'tile' && q.who === 0 && S.turn === T1 && [6, 8, 11, 13, 15].includes(o.tile)]] },
+    wiz: ['eve', 'lori'], pos: [10, 7], ready: [1, 0], hand: ['flamearrow', 'soda', 'checkmate', 'dazzle'], opp: ['bait', 'transfer', 'charge', 'insight'], nest: ['gale'], draws: ['charge', 'dart', 'shockwave', 'gale', 'fireball'],
+    need: [['ending turn 1 on a purple tile', (o, S, q) => q.kind === 'tile' && q.who === 0 && q.verb !== 'bump' && S.turn === T1 && [6, 8, 11, 13, 15].includes(o.tile)]] },
   { name: 'Retail Therapy', goal: {type: 'defeat', n: 2},
     // Buy Ruupart's Blade, then cash it in for a much bigger Bump.
-    wiz: ['bill', 'eve'], pos: [12, 8], ready: [3, 0], hand: ['dart', 'bait', 'soda', 'insight'], opp: ['fireball', 'shockwave'], nest: ['gale', 'leap'], market: ['blade', 'backpack', 'thunderbox'], deck: [],
+    wiz: ['bill', 'eve'], pos: [10, 7], ready: [3, 0], hand: ['dart', 'hop', 'soda', 'step'], opp: ['fireball', 'shockwave', 'gale', 'flamearrow'], nest: ['charge', 'transfer'], market: ['blade', 'backpack', 'thunderbox'], draws: ['insight', 'gale', 'bait', 'leap', 'dazzle'],
     need: [['buying an Item', o => o.act === 'buy']] },
   { name: 'Turn the Tables', goal: {type: 'escape', n: 2},
     // A Flight swaps the ends: the Threatened tiles beside you become the Exit.
-    wiz: ['trevor', 'andromeda'], pos: [5, 13], hand: ['transfer', 'step', 'hop', 'soda'], opp: ['bait', 'dazzle'], nest: ['fireball', 'dart', 'checkmate', 'charge'], deck: [],
+    wiz: ['trevor', 'peebnup'], pos: [5, 13], hand: ['transfer', 'step', 'hop', 'soda'], opp: ['bait', 'dazzle', 'charge', 'leap'], nest: ['fireball', 'dart', 'checkmate', 'charge'], draws: ['gale', 'shockwave'],
     need: [['Transfer going to the Nest on turn 1', (o, S) => o.card === 'transfer' && S.turn === T1]] },
   { name: 'Cheat Code', goal: {type: 'escape', n: 2},
     // A Bump earns the White Gem that pays for a Bridge Hack.
-    wiz: ['omar', 'robot'], gems: [2, 3], pos: [13, 9], white: [2, 0], hand: ['dart', 'hop', 'soda', 'bait'], opp: ['step', 'charge'], nest: ['gale', 'shockwave'], hacks: ['sk8', 'lullaby', 'mondo'], deck: [],
+    wiz: ['omar', 'robot'], gems: [2, 3], pos: [13, 9], white: [2, 0], hand: ['dart', 'hop', 'soda', 'transfer'], opp: ['bait', 'charge', 'leap', 'dazzle'], nest: ['insight', 'step'], hacks: ['sk8', 'lullaby', 'mondo'], draws: ['fireball', 'charge'],
     need: [['a Bridge Hack', o => o.act === 'hack'], ['Magic Dart', o => o.card === 'dart']] },
   { name: 'Clipped Wings', goal: {type: 'survive', n: 2},
     // Dazzle can pull a heavy card out of the Nest, so the next card brings a Roost instead of a Flight.
-    wiz: ['derby', 'eve'], pos: [14, 8], hand: ['dazzle', 'shockwave'], opp: ['flamearrow', 'soda', 'step', 'hop'], nest: ['bait', 'fireball', 'gale', 'gale', 'insight'], deck: [],
+    wiz: ['derby', 'eve'], pos: [14, 8], hand: ['dazzle', 'shockwave', 'transfer', 'fireball'], opp: ['flamearrow', 'hop', 'charge', 'step'], nest: ['bait', 'dart', 'gale', 'gale', 'insight'], draws: ['soda', 'leap', 'checkmate', 'charge'],
     need: [['Dazzle', o => o.card === 'dazzle' && o.zone === 'hand'], ['taking a card out of the Nest', (o, S, q) => /^Dazzle/.test(q.prompt) && !!o.card]] },
 ];
+if (process.env.PZ) { const [k, o] = JSON.parse(process.env.PZ); Object.assign(PUZZLES[k - 1], o); if (process.env.ONLY) PUZZLES.splice(0, PUZZLES.length, PUZZLES[k - 1]); }
 /* -t N: play puzzle N with you always taking the first choice that keeps it solvable (or the first choice), and print what happens. */
 const tIdx = process.argv.indexOf('-t');
 if (tIdx > 0) {
@@ -82,12 +86,19 @@ if (tIdx > 0) {
 let ok = true; const out = [];
 PUZZLES.forEach((o, i) => {
   const z = {id: i + 1, name: o.name, goal: o.goal, snap: build(o)}; z.turn = z.snap.turn + 1;
-  const T = E.puzzleTurns(z), run = ban => { const ctx = {n: 400000, memo: new Map(), ban}; const v = E.puzzleForced(z.snap, [], T, z, ctx); return {v, cut: !!ctx.cut, used: 400000 - ctx.n}; };
+  const T = E.puzzleTurns(z), run = (ban, n = 6000000) => { const ctx = {n, memo: new Map(), ban}; const v = E.puzzleForced(z.snap, [], T, z, ctx); return {v, cut: !!ctx.cut, used: n - ctx.n}; };
   const base = run(null), msgs = [];
   if (!base.v || base.cut) { ok = false; msgs.push('NOT SOLVABLE' + (base.cut ? ' (search cut off)' : '')); }
-  for (const [what, f] of o.need || []) { const r = run(f); if (r.v || r.cut) { ok = false; msgs.push(`solvable without ${what}` + (r.cut ? ' (cut off)' : '')); } }
+  // The lesson is needed if, with its key move forbidden, you cannot succeed even against an opponent who just sits
+  // still (cheap to check); if that opponent is too easy to beat, fall back to the full search.
+  const passive = q => { const f = x => q.opts.findIndex(x); let i = q.kind === 'tile' ? f(x => x.label === 'Stay') : q.kind === 'gem' ? f(x => x.act === 'pass') : f(x => x.id === 'no'); return i < 0 ? 0 : i; };
+  for (const [what, f] of o.need || []) {
+    const c1 = {n: 3000000, memo: new Map(), ban: f, opp: passive}; let v = E.puzzleForced(z.snap, [], T, z, c1), cut = !!c1.cut;
+    if (v || cut) { const r = run(f, 6000000); v = r.v; cut = r.cut; }
+    if (v || cut) { ok = false; msgs.push(`solvable without ${what}` + (cut ? ' (cut off)' : '')); }
+  }
   // how many first choices keep it solvable
-  const G = E.Game.resume(z.snap, [], undefined), first = G.req.opts.map((op, k) => E.puzzleForced(z.snap, [k], T, z, {n: 400000, memo: new Map()}) ? op.label : null).filter(Boolean);
+  const fm = new Map(), G = E.Game.resume(z.snap, [], undefined), first = G.req.opts.map((op, k) => E.puzzleForced(z.snap, [k], T, z, {n: 3000000, memo: fm}) ? op.label : null).filter(Boolean);
   if (first.length === G.req.opts.length) { ok = false; msgs.push('every first choice works'); }
   console.error(`${String(i + 1).padStart(2)}. ${o.name.padEnd(18)} ${o.goal.type} ${o.goal.n}  ${base.used} nodes  first: ${first.length}/${G.req.opts.length}${verbose ? ' [' + first.join(' | ') + ']' : ''}  ${msgs.length ? '✗ ' + msgs.join('; ') : '✓'}`);
   out.push(z);

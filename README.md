@@ -9,7 +9,7 @@ Open `www/index.html` (or `source/dist/dragonbridge.html`) in a browser to play.
 - 2nd Edition rules, on by default, with a setting to play the printed 1st Edition. The changed cards are listed in `source/RULINGS.md`; add new 2E faces with `tools/add_2e.py`.
 - The bridge lies sideways; Wizards and the Dragon are circular face tokens.
 - CPU opponents: Easy, Normal, Hard, Expert. Optional Expert Tips.
-- Modes: Versus, Tournament (8 Wizards, single elimination), Ranked (Elo, ranks 1–10), Daily Challenge, Puzzles (9 hand-built positions that each teach one thing, with a named goal such as "Escape in 2 turns!"; each is proved solvable, and proved unsolvable without its lesson).
+- Modes: Versus, Tournament (8 Wizards, single elimination), Ranked (Elo, ranks 1–10), Daily Challenge, Puzzles (9 hand-built positions that each teach one thing, with a named goal such as "Escape in 2 turns!"; they use the normal rules, full hands and normal draws, with the deck order scripted; each is proved solvable, and proved unsolvable without its lesson).
 - How to Play (coached first match), Card Library, Rulebook (the printed manual), Stats and Achievements, Options, match log, save and continue.
 
 - Undo for your own choices this turn, until something hidden is revealed. Mobile View (Options) plays in a phone-shaped portrait layout on any screen.

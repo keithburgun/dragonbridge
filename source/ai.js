@@ -164,7 +164,8 @@ const puzzleTurns = z => z.goal.type === 'escape' ? 2 * z.goal.n - 1 : 2 * z.goa
 const puzzleOk = (z, S) => z.goal.type === 'survive' ? S.winner !== 1 : S.winner === 0;
 /* Can player 0 force success, whatever the opponent does? snap is a turn-start snapshot, decs the choices made so far
    this turn, turnsLeft counts this turn. ctx = {n: node budget, memo: Map, ban?: (option, S) => true to forbid one of
-   player 0's options (used to check that a puzzle really needs its key move)}. */
+   player 0's options (used to check that a puzzle really needs its key move), opp?: (request, S) => index, a fixed
+   way for the opponent to play (if you cannot succeed even against that, you certainly cannot force it)}. */
 function puzzleForced(snap, decs, turnsLeft, z, ctx) {
   if (--ctx.n < 0) { ctx.cut = true; return false; }
   const r = probe(snap, decs, 1);
@@ -175,6 +176,7 @@ function puzzleForced(snap, decs, turnsLeft, z, ctx) {
     const v = puzzleForced(r.S, [], turnsLeft - 1, z, ctx); if (ctx.memo && !ctx.cut) ctx.memo.set(key, v); return v;
   }
   const mine = r.req.p === 0;
+  if (!mine && ctx.opp) return puzzleForced(snap, decs.concat(ctx.opp(r.req, r.S)), turnsLeft, z, ctx);
   for (let i = 0; i < r.req.opts.length; i++) {
     if (mine && ctx.ban && ctx.ban(r.req.opts[i], r.S, r.req)) continue;
     const w = puzzleForced(snap, decs.concat(i), turnsLeft, z, ctx); if (mine && w) return true; if (!mine && !w) return false;
@@ -185,12 +187,14 @@ const puzzleTurnsLeft = (z, S) => puzzleTurns(z) - (S.turn - z.turn);
 /* The puzzle opponent: a choice that stops you, if there is one. */
 function puzzleReply(G, z, memo) {
   const q = G.req, left = puzzleTurnsLeft(z, G.S);
-  for (let i = 0; i < q.opts.length; i++) { const ctx = {n: 150000, memo}; if (!puzzleForced(G.snap, G.decs.concat(i), left, z, ctx) && !ctx.cut) return i; }
-  return aiChoose(G, 'hard');   // nothing stops you: play sensibly anyway
+  // Look for a reply that stops you (a bounded search, so the game never stalls); otherwise play sensibly.
+  let budget = 40000;
+  for (let i = 0; i < q.opts.length && budget > 0; i++) { const ctx = {n: budget, memo}; const v = puzzleForced(G.snap, G.decs.concat(i), left, z, ctx); budget = ctx.n; if (!v && !ctx.cut) return i; }
+  return aiChoose(G, 'hard');
 }
 /* For you: a choice that keeps the puzzle solvable (used by the tests), or -1. */
 function puzzleHint(G, z, memo) {
   const q = G.req, left = puzzleTurnsLeft(z, G.S);
-  for (let i = 0; i < q.opts.length; i++) if (puzzleForced(G.snap, G.decs.concat(i), left, z, {n: 150000, memo})) return i;
+  for (let i = 0; i < q.opts.length; i++) if (puzzleForced(G.snap, G.decs.concat(i), left, z, {n: 3000000, memo})) return i;
   return -1;
 }
