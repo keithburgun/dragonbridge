@@ -41,6 +41,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
     await playOut(); await p.waitForTimeout(400); await shot('end');
     ok(await p.locator('#sheet h2').count() === 1, 'end-of-match sheet'); await p.evaluate(() => toTitle());
   }
+  // no mirror matches: your Wizard is not offered as the opponent, and Random never picks it
+  await p.evaluate(() => toTitle()); await p.click('#title [data-a="play"]'); await p.click('[data-a="setmode"][data-v="versus"]'); await p.click('[data-a="setopp"][data-v="eve"]'); await p.click('[data-a="setwiz"][data-v="eve"]');
+  ok(await p.evaluate(() => P.opt.opp === 'random') && await p.locator('[data-a="setopp"][data-v="eve"]').count() === 0, 'choosing the opponent\'s Wizard for yourself resets the opponent');
+  ok(await p.evaluate(() => { for (let i = 0; i < 300; i++) if (randWiz('eve') === 'eve') return false; return true; }), 'Random never picks your own Wizard');
+  ok(!(await p.evaluate(() => !!document.querySelector('#goal') && !document.querySelector('#goal').hidden)), 'no puzzle goal outside puzzles');
   // tournament: play until out or champion
   await p.evaluate(() => toTitle()); await p.click('#title [data-a="play"]'); await p.click('[data-a="setmode"][data-v="tour"]'); await p.click('[data-a="setlevel"][data-v="easy"]'); await p.click('[data-a="launch"]');
   for (let r = 0; r < 3; r++) { await playOut(); await p.waitForTimeout(400); if (await p.locator('#sheet [data-a="tourgo"]').count()) await p.click('#sheet [data-a="tourgo"]'); else break; }
@@ -55,10 +60,12 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
   const np = await p.evaluate(() => PUZZLES.length); ok(np >= 8, 'puzzles present');
   for (let i = 1; i <= np; i++) {
     await p.evaluate(id => puzzleGo(id), i); await p.waitForTimeout(100); if (i === 1) await shot('puzzle');
+    ok(/^Puzzle \d+: (Escape this turn!|Get .+ pounced on their next turn!)$/.test(await p.textContent('#sheet h2')), `puzzle ${i} opens by stating its goal`); await p.click('#sheet [data-a="close"]'); ok(await p.isVisible('#goal'), 'goal stays on screen');
+    ok(await p.evaluate(() => M.G.S.wiz[0] !== M.G.S.wiz[1]), 'puzzle is not a mirror match');
     await playOut(() => { const G = M.G; for (let k = 0; k < G.req.opts.length; k++) if (forcedWin(G.snap, G.decs.concat(k), 0, {n: 60000}, G.S.cur === 0 ? 2 : 1)) return k; return 0; });
     await p.waitForTimeout(350); ok(/solved/i.test(await p.textContent('#sheet h2', {timeout: 3000}).catch(() => 'no result sheet')), `puzzle ${i} not solved by its winning line`);
   }
-  await p.evaluate(() => puzzleGo(1)); await playOut(); await p.waitForTimeout(350); ok(await p.locator('#sheet h2').count() === 1, 'puzzle verdict after random play');
+  await p.evaluate(() => { puzzleGo(1); closeOv(); }); await playOut(); await p.waitForTimeout(350); ok(await p.locator('#sheet h2').count() === 1, 'puzzle verdict after random play');
   await p.evaluate(() => toTitle());
   // tutorial shows the coach
   await p.evaluate(() => toTitle()); await p.click('#title [data-a="tutorial"]'); await p.waitForTimeout(300); ok(await p.isVisible('#coach'), 'tutorial coach'); await shot('tutorial');

@@ -9,13 +9,13 @@ Open `www/index.html` (or `source/dist/dragonbridge.html`) in a browser to play.
 - 2nd Edition rules, on by default, with a setting to play the printed 1st Edition. The changed cards are listed in `source/RULINGS.md`; add new 2E faces with `tools/add_2e.py`.
 - The bridge lies sideways; Wizards and the Dragon are circular face tokens.
 - CPU opponents: Easy, Normal, Hard, Expert. Optional Expert Tips.
-- Modes: Versus, Tournament (8 Wizards, single elimination), Ranked (Elo, ranks 1–10), Daily Challenge, Puzzles (10, each with a verified forced win).
+- Modes: Versus, Tournament (8 Wizards, single elimination), Ranked (Elo, ranks 1–10), Daily Challenge, Puzzles (10, each with a verified forced win and its goal stated up front).
 - How to Play (coached first match), Card Library, Rulebook (the printed manual), Stats and Achievements, Options, match log, save and continue.
 
 - Undo for your own choices this turn, until something hidden is revealed. Mobile View (Options) plays in a phone-shaped portrait layout on any screen.
 
 Not ported from Spellstorm yet: online play and accounts, the Linux / Steam / Reddit builds, in-app updates, translations, controller prompts, replays.
-Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-player).
+Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-player). Mirror matches (both players as the same Wizard) are not offered anywhere.
 
 ## Layout
 

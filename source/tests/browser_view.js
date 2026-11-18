@@ -17,7 +17,7 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   const mine = () => p.waitForFunction(() => M.G.over || !M.busy && M.G.req && M.G.req.p === 0);
   await mine(); await shot('match');
   ok(!(await p.isVisible('#logpane')), 'no side log in Mobile View'); ok(await p.isVisible('#mebar [data-a="log"]'), 'Log button back in Mobile View');
-  ok(await p.evaluate(() => { const a = document.querySelector('#app').getBoundingClientRect(); return [...document.querySelectorAll('#main > *')].every(e => { const q = e.getBoundingClientRect(); return q.left >= a.left - 1 && q.right <= a.right + 1; }); }), 'match layout fits the frame');
+  ok(await p.evaluate(() => { const a = document.querySelector('#app').getBoundingClientRect(); return [...document.querySelectorAll('#main > *')].filter(e => !e.hidden).every(e => { const q = e.getBoundingClientRect(); return q.left >= a.left - 1 && q.right <= a.right + 1; }); }), 'match layout fits the frame');
   ok(await p.evaluate(() => getComputedStyle(document.querySelector('#dragon')).flexDirection === 'row'), 'phone layout rules apply inside the frame');
   ok(await p.evaluate(() => JSON.parse(localStorage.getItem('db_profile')).opt.mview === true), 'Mobile View is remembered');
   // ---- Undo
