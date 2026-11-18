@@ -6,6 +6,7 @@ Open `www/index.html` (or `source/dist/dragonbridge.html`) in a browser to play.
 ## What's in the first version
 
 - Full rules with the Bridge-Hacking expansion always on: 17 Action cards, 15 Wizards, 9 Items, 9 Bridge Hacks, White Gems, Dragon Powers, Flight and Roost.
+- 2nd Edition rules, on by default, with a setting to play the printed 1st Edition. The changed cards are listed in `source/RULINGS.md`; add new 2E faces with `tools/add_2e.py`.
 - The bridge lies sideways; Wizards and the Dragon are circular face tokens.
 - CPU opponents: Easy, Normal, Hard, Expert. Optional Expert Tips.
 - Modes: Versus, Tournament (8 Wizards, single elimination), Ranked (Elo, ranks 1–10), Daily Challenge, Puzzles (10, each with a verified forced win).
@@ -34,6 +35,8 @@ Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-play
     node tests/fuzz.js 6                   # 1,350 random games across every Wizard pair; must not crash or lose a card
     node tests/ladder.js hard normal 30    # CPU ladder: the first level should win more
     node tests/browser_check.js 1280 800   # plays every mode in a real browser (needs Playwright); also try 390 780
+    node tests/ed2.js                      # each 2nd Edition card change
+    node tests/browser_ed.js               # the 2nd Edition setting in a browser
     node tests/known.js                    # Insight / Shockwave reveals and which cards stay known
     node tests/browser_ui.js               # drag-to-play, hover preview, Buy / Hack menus, side log
 

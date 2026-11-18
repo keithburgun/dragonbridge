@@ -65,6 +65,27 @@ const WIZ = {
   trevor:   {n: 'Trevor Lebebbedeh', s: 'Trevor', title: 'Elaborate Songwriter', t: ['On Roost: deplete a Gem. On Flight: ready a Gem.', 'Action Phase: as your action, deplete 2 Gems to play up to 3 Actions. Reshuffle all played cards. You can not escape on this turn.']},
   gelf:     {n: 'Gelf Lanz', s: 'Gelf', title: 'Peacekeeping Knight', t: ['On BUMP, within 6 tiles of the opponent: first, MOVE to the opponent’s position.', 'On FLIGHT: place 1 Gem on the Dragon. While there, Flight requires +1 Wing and the opponent may not Teleport. Next Roost or Flight, return the Gem and then ready a Gem.']},
 };
+/* 2nd Edition: the cards whose text changed. A game uses them when S.ed === 2 (the default for new games). */
+const ED2 = {
+  items: {
+    loom: 'After you MOVE, you may immediately BUMP 1. (Do not gain a White Gem.)',
+    thunderbox: 'On FLIGHT: BUMP 2.',
+    skates: '+1 Move.',
+    cutlass: 'On BUMP: if the opponent lands on an End tile or Gem tile, the opponent depletes a Gem and discards a White Gem.',
+    backpack: 'When you ready a Gem from a green Gem tile, ready another Gem.',
+  },
+  hacks: {lullaby: 'The opponent may reveal and reshuffle a 2-Wing card from their hand. If they didn’t, gain a free Item.'},
+  wiz: {
+    eve: ['Turn start: if you are on a purple tile, you have +2 Bump this turn.'],
+    may: ['On Bridge Hack: after Hacking, Teleport 1 OR gain a White Gem.', 'Gem Action: if you are on a purple tile, BUMP 1 and the opponent gives you a random card from their hand.'],
+    robot: ['Game start: gain a random Item.', 'Roost: lose 1 Item of your choice.', 'Flight: gain a random Item.'],
+    abragail: ['While you have 2 or 3 ready Gems at turn start: +1 Move and +1 Bump for the turn.', 'After you buy an Item: you may take any card from the Nest to your hand.'],
+  },
+};
+const itemText = (i, ed) => ed === 2 && ED2.items[i] || ITEMS[i].t;
+const hackText = (h, ed) => ed === 2 && ED2.hacks[h] || HACKS[h].t;
+const wizLines = (w, ed) => ed === 2 && ED2.wiz[w] || WIZ[w].t;
+const e2 = S => S.ed === 2;
 WIZ.may2 = {n: 'May Danaris', s: 'May', title: 'Hacking Avenger', t: WIZ.may.t, hidden: true};
 const WIZ_IDS = Object.keys(WIZ).filter(w => !WIZ[w].hidden);
 
@@ -124,6 +145,10 @@ function* gainItem(S, p, it, from) {
   if (it === 'vr') { gainWhite(S, p, 2); yield* teleport(S, p, 3); }
   if (isW(S, p, 'bunny') && S.items[p].length === 2 && !S.once[p]) { S.once[p] = 1; ready(S, p, 2); }
 }
+function* randomItem(S, p) {   // the top of the (shuffled) Item Deck
+  if (!S.itemDeck.length) return;
+  yield* gainItem(S, p, S.itemDeck.pop(), null);
+}
 function* pickItem(S, p, prompt) {   // take an Item from the Market (or the top of the Item Deck if the Market is empty)
   if (!S.market.length && S.itemDeck.length) S.market.push(S.itemDeck.pop());
   if (!S.market.length) return;
@@ -132,7 +157,7 @@ function* pickItem(S, p, prompt) {   // take an Item from the Market (or the top
 }
 
 /* ---------- movement ---------- */
-const tpBonus = (S, p) => (isW(S, p, 'eve') && S.items[p].length === 1 ? 1 : 0) + (isW(S, p, 'peebnup') ? S.nest.filter(c => c === 'charge').length : 0) - (S.power === 'fireball' ? 1 : 0);
+const tpBonus = (S, p) => (isW(S, p, 'eve') && !e2(S) && S.items[p].length === 1 ? 1 : 0) + (isW(S, p, 'peebnup') ? S.nest.filter(c => c === 'charge').length : 0) - (S.power === 'fireball' ? 1 : 0);
 function* teleport(S, p, n, o = {}) {
   if (S.away[p]) return 0;
   if (S.gelf[1 - p]) { log(S, `${nm(S, p)} may not Teleport while Gelf’s Gem is on the Dragon.`); return 0; }
@@ -146,21 +171,21 @@ function* teleport(S, p, n, o = {}) {
 function* move(S, p, n, o = {}) {
   if (S.away[p]) return 0;
   if (isExit(S, S.pos[p]) && !S.t.noEscape) win(S, p, 'escape');
-  if (o.card && isW(S, p, 'robot') && S.t.phase === 'action') n = S.hackDown[p].length >= 2 ? 3 : 1;
+  if (o.card && isW(S, p, 'robot') && !e2(S) && S.t.phase === 'action') n = S.hackDown[p].length >= 2 ? 3 : 1;
   let blink = 0;
   if (has(S, p, 'blink') && (yield* yn(S, p, 'Reshuffle Blink Scroll for +5 Move?', 'Use Blink Scroll'))) { dropItem(S, p, 'blink'); blink = 5; }
-  const from = S.pos[p], gen = Math.max(0, n + S.t.moveB + blink + (isW(S, p, 'may2') && S.t.phase === 'action' ? 1 : 0));
-  const away = (S.power === 'leap' ? 1 : 0) + (has(S, p, 'skates') ? 2 : 0), opts = [];
+  const from = S.pos[p], gen = Math.max(0, n + S.t.moveB + blink + (isW(S, p, 'may2') && S.t.phase === 'action' ? 1 : 0) + (e2(S) && has(S, p, 'skates') ? 1 : 0));
+  const away = (S.power === 'leap' ? 1 : 0) + (has(S, p, 'skates') && !e2(S) ? 2 : 0), opts = [];
   for (let t = 0; t <= LAST; t++) { const d = t - from; if (!d || Math.abs(d) <= gen + (isAway(from, Math.sign(d)) ? away : 0)) opts.push({tile: t, label: d ? tileName(t) : 'Stay'}); }
   const c = yield* ask(S, p, 'tile', `Move up to ${gen}${away ? ' (+' + away + ' away from center)' : ''}`, opts, {verb: 'move', who: p});
   S.pos[p] = c.tile; const moved = Math.abs(c.tile - from);
   if (moved) log(S, `${nm(S, p)} moves ${moved} to ${tileName(c.tile)}.`);
-  if (has(S, p, 'loom') && !o.noLoom && (yield* yn(S, p, 'Accursed Loom: Bump 1 now?', 'Bump 1'))) yield* bump(S, p, 1);
+  if (has(S, p, 'loom') && !o.noLoom && (yield* yn(S, p, 'Accursed Loom: Bump 1 now?', 'Bump 1'))) yield* bump(S, p, 1, e2(S) ? {noWhite: 1} : {});
   return moved;
 }
 function* bump(S, p, n, o = {}) {
   let t = 1 - p;
-  if (isW(S, p, 'robot') && !S.away[p]) { const c = yield* ask(S, p, 'yn', 'Robot Boy: who gets Bumped?', [{id: 'opp', label: nm(S, t)}, {id: 'self', label: 'Yourself'}]); if (c.id === 'self') t = p; }
+  if (isW(S, p, 'robot') && !e2(S) && !S.away[p]) { const c = yield* ask(S, p, 'yn', 'Robot Boy: who gets Bumped?', [{id: 'opp', label: nm(S, t)}, {id: 'self', label: 'Yourself'}]); if (c.id === 'self') t = p; }
   if (isW(S, p, 'gelf') && t !== p && !S.away[p] && !S.away[t] && S.pos[p] !== S.pos[t] && Math.abs(S.pos[p] - S.pos[t]) <= 6 && (isExit(S, S.pos[p]) && !S.t.noEscape || (yield* yn(S, p, `Gelf: first MOVE to ${nm(S, t)}’s position?`, 'Move there')))) {
     if (isExit(S, S.pos[p]) && !S.t.noEscape) win(S, p, 'escape');
     S.pos[p] = S.pos[t]; log(S, `${nm(S, p)} moves to ${nm(S, t)}’s position.`);
@@ -173,10 +198,10 @@ function* bump(S, p, n, o = {}) {
   const toDragon = d => (d < 0) === (S.dragon === 0);
   const dc = yield* ask(S, p, 'dir', `Bump ${t === p ? 'yourself' : nm(S, t)} ${base}: which way?`, dirs.map(d => ({dir: d, tile: clampT(from + d * base), label: toDragon(d) ? 'Toward the Dragon' : 'Toward the Exit'})), {who: t, verb: 'bump'});
   const dir = dc.dir, aw = isAway(from, dir);
-  const eve = isW(S, p, 'eve') && !S.away[p] && tileColor(S.pos[p]) === 'P';
+  const eve = isW(S, p, 'eve') && !e2(S) && !S.away[p] && tileColor(S.pos[p]) === 'P';
   if (eve && S.ready[1 - p] > S.ready[p]) ready(S, p, 1);
   let bonus = (eve ? 2 : 0) + (isW(S, p, 'may2') && S.t.phase === 'action' && aw ? 2 : 0) + (S.power === 'charge' && aw ? 1 : 0) + (S.power === 'hop' ? S.items[1 - p].length : 0)
-    + (has(S, p, 'blade') && aw ? 1 : 0) + (has(S, p, 'cutlass') && aw ? 1 : 0);
+    + (has(S, p, 'blade') && aw ? 1 : 0) + (has(S, p, 'cutlass') && !e2(S) && aw ? 1 : 0);
   let total = base;
   if (bonus > 0 && (yield* yn(S, p, `Add your +${bonus} Bump bonus? (Bump ${base + bonus} instead of ${base})`, `Bump ${base + bonus}`))) total += bonus;
   if (has(S, p, 'blade') && aw && (yield* yn(S, p, 'Reshuffle Ruupart’s Blade for +4 more Bump?', `Bump ${total + 4}`))) { dropItem(S, p, 'blade'); total += 4; }
@@ -184,7 +209,10 @@ function* bump(S, p, n, o = {}) {
   S.pos[t] = clampT(dest);
   log(S, `${nm(S, p)} bumps ${t === p ? 'themself' : nm(S, t)} ${total} to ${tileName(S.pos[t])}${over ? ', past the end of the bridge' : ''}.`);
   if (over) { deplete(S, t, 1); if (isW(S, p, 'december') && S.t.phase === 'action' && t !== p) ready(S, p, 2); }
-  if (has(S, p, 'cutlass') && t !== p && isEnd(S.pos[t])) { log(S, 'Techno-Cutlass:'); deplete(S, t, 1); }
+  if (has(S, p, 'cutlass') && t !== p && (isEnd(S.pos[t]) || e2(S) && isGemTile(S, S.pos[t]))) {
+    log(S, 'Techno-Cutlass:'); deplete(S, t, 1);
+    if (e2(S) && S.white[t] > 0) { S.white[t]--; S.supply++; log(S, `${nm(S, t)} discards a White Gem.`); }
+  }
   if (isW(S, p, 'venice') && !S.away[p] && Math.abs(S.pos[p] - CENTER) <= 1) {
     if (!S.power) ready(S, p, 1);
     else if (S.ready[p] > 0 && (yield* yn(S, p, `Venice: deplete a Gem to put the Dragon Power (${ACTIONS[S.power].n}) in the Nest?`, 'Deplete a Gem'))) { deplete(S, p, 1); S.nest.push(S.power); log(S, `${ACTIONS[S.power].n} leaves the Dragon and goes to the Nest.`); S.power = null; }
@@ -283,7 +311,16 @@ function* playCard(S, p, c, dest) {
 const HACKFX = {
   *law(S, p) { const d = yield* teleport(S, p, 2); yield* bump(S, p, 1, d ? {dir: -Math.sign(d), noWhite: 1} : {noWhite: 1}); },
   *sk8(S, p) { yield* teleport(S, p, 3); },
-  *lullaby(S, p) { const c = yield* ask(S, p, 'card', 'chip tune lullaby: put a card from your hand into the Nest', cardOpts(S.hand[p], {zone: 'hand'}), {show: 1}); if (c) { S.hand[p].splice(S.hand[p].indexOf(c.card), 1); S.nest.push(c.card); log(S, `${nm(S, p)} puts ${ACTIONS[c.card].n} into the Nest.`); } },
+  *lullaby(S, p) {
+    if (e2(S)) {
+      const t = 1 - p, two = [...new Set(S.hand[t].filter(c => ACTIONS[c].w === 2))];
+      const k = two.length ? yield* ask(S, t, 'card', `chip tune lullaby: reveal and reshuffle a 2-Wing card? If you don’t, ${nm(S, p)} gains a free Item.`, cardOpts(two, {zone: 'hand'}).concat({id: 'no', label: 'Keep my cards'})) : {};
+      if (k.card) { S.hand[t].splice(S.hand[t].indexOf(k.card), 1); S.deck.push(k.card); shuffle(S, S.deck); log(S, `${nm(S, t)} reveals ${ACTIONS[k.card].n} and shuffles it into the deck.`); }
+      else yield* pickItem(S, p, 'chip tune lullaby: gain a free Item');
+      return;
+    }
+    const c = yield* ask(S, p, 'card', 'chip tune lullaby: put a card from your hand into the Nest', cardOpts(S.hand[p], {zone: 'hand'}), {show: 1}); if (c) { S.hand[p].splice(S.hand[p].indexOf(c.card), 1); S.nest.push(c.card); log(S, `${nm(S, p)} puts ${ACTIONS[c.card].n} into the Nest.`); }
+  },
   *forge(S, p) { S.hand[p].splice(S.hand[p].indexOf('fireball'), 1); S.deck.push('fireball'); shuffle(S, S.deck); log(S, `${nm(S, p)} reveals and shuffles Fireball.`); yield* pickItem(S, p, 'syntho forge: gain an Item'); },
   *mondo(S, p) { yield* bump(S, p, 4, {away: 1, noWhite: 1}); },
   *wyrm(S, p) { if (!S.away[p]) { S.pos[p] = LAST - S.pos[p]; log(S, `${nm(S, p)} wyrmholes to ${tileName(S.pos[p])}.`); } },
@@ -296,16 +333,20 @@ const HACKFX = {
     log(S, `${nm(S, p)} swaps ${ACTIONS[a.card].n} for ${ACTIONS[b.card].n} from the Nest.`); deplete(S, 1 - p, 1);
   },
 };
-const hackCost = (S, p, h) => Math.max(0, HACKS[h].cost - (isW(S, p, 'may') ? 1 : 0));
-const hackOk = (S, p, h) => h === 'forge' ? S.hand[p].includes('fireball') && (S.market.length || S.itemDeck.length) : h === 'lullaby' ? S.hand[p].length > 0 : h === 'deals' ? S.hand[p].length > 0 && S.nest.length > 0 : true;
+const hackCost = (S, p, h) => Math.max(0, HACKS[h].cost - (isW(S, p, 'may') && !e2(S) ? 1 : 0));
+const hackOk = (S, p, h) => h === 'forge' ? S.hand[p].includes('fireball') && (S.market.length || S.itemDeck.length) : h === 'lullaby' ? e2(S) || S.hand[p].length > 0 : h === 'deals' ? S.hand[p].length > 0 && S.nest.length > 0 : true;
 function* doHack(S, p, h, o = {}) {
   const cost = hackCost(S, p, h); S.white[p] -= cost; S.supply += cost;
   log(S, `${nm(S, p)} plays the Bridge Hack ${HACKS[h].n} for ${cost} White Gem${cost === 1 ? '' : 's'}.`);
   yield* HACKFX[h](S, p);
+  if (e2(S) && isW(S, p, 'may')) {
+    const c = yield* ask(S, p, 'yn', 'May: after Hacking, Teleport 1 or gain a White Gem', [{id: 'tp', label: 'Teleport 1'}].concat(S.supply > 0 ? [{id: 'w', label: 'Gain a White Gem'}] : []), {show: 1});
+    if (c.id === 'w') gainWhite(S, p, 1); else yield* teleport(S, p, 1, {why: 'May'});
+  }
   const i = S.hacks.indexOf(h); if (i < 0) return;
   const refill = () => { if (S.hackDeck.length) S.hacks.splice(i, 0, S.hackDeck.pop()); };
   if (o.reshuffle) { S.hacks.splice(i, 1); S.hackDeck.push(h); shuffle(S, S.hackDeck); refill(); }
-  else if (isW(S, p, 'may') || isW(S, p, 'robot')) { S.hacks.splice(i, 1); S.hackDown[p].push(h); refill(); log(S, `${HACKS[h].n} is flipped face down.`); }
+  else if (!e2(S) && (isW(S, p, 'may') || isW(S, p, 'robot'))) { S.hacks.splice(i, 1); S.hackDown[p].push(h); refill(); log(S, `${HACKS[h].n} is flipped face down.`); }
 }
 function* chooseHack(S, p, prompt, o) {
   const av = S.hacks.filter(h => S.white[p] >= hackCost(S, p, h) && hackOk(S, p, h));
@@ -324,7 +365,8 @@ function* gemPhase(S, p) {
   if (S.ready[p] >= cost && !(isW(S, p, 'may2') && cost === 3)) for (const it of S.market) o.push({act: 'buy', item: it, label: `Buy ${ITEMS[it].n} (${cost} Gems)`});
   for (const h of S.hacks) if (S.white[p] >= hackCost(S, p, h) && hackOk(S, p, h)) o.push({act: 'hack', hack: h, label: `Hack: ${HACKS[h].n} (${hackCost(S, p, h)} White)`});
   if (isW(S, p, 'bunny') && near(3) && S.ready[p] > 0 && S.hand[p].length) o.push({act: 'bunny', label: 'Bunny: deplete a Gem to play an Action card, then shuffle it'});
-  if (isW(S, p, 'may') && S.hackDown[p].length) o.push({act: 'mayhide', label: 'May: flip a Hack face-up and take your Wizard off the bridge'});
+  if (isW(S, p, 'may') && e2(S) && !S.away[p] && tileColor(S.pos[p]) === 'P') o.push({act: 'maytake', label: 'May: Bump 1 and take a random card from the opponent’s hand'});
+  if (isW(S, p, 'may') && !e2(S) && S.hackDown[p].length) o.push({act: 'mayhide', label: 'May: flip a Hack face-up and take your Wizard off the bridge'});
   if (isW(S, p, 'omar')) {
     if (!S.items[p].length && S.ready[p] > 0 && S.white[p] >= 2 && (S.market.length || S.itemDeck.length)) o.push({act: 'omarbuy', label: 'Omar: deplete a Gem and discard 2 White Gems to gain an Item'});
     for (const it of S.items[p]) o.push({act: 'omarbump', item: it, label: `Omar: reshuffle ${ITEMS[it].n} to Bump 6`});
@@ -336,10 +378,15 @@ function* gemPhase(S, p) {
   const c = yield* ask(S, p, 'gem', 'Gem Phase: choose one Gem Action', o);   // with nothing but "End Gem Phase" on offer, the phase is skipped
   switch (c.act) {
     case 'tp': deplete(S, p, 1); yield* teleport(S, p, 2); break;
-    case 'ready': ready(S, p, 1); break;
+    case 'ready': ready(S, p, 1); if (e2(S) && has(S, p, 'backpack') && dep(S, p) > 0) { log(S, 'Cool Backpack:'); ready(S, p, 1); } break;
+    case 'maytake': {
+      yield* bump(S, p, 1);
+      if (S.hand[opp].length) { const c = S.hand[opp].splice(Math.floor(rnd(S) * S.hand[opp].length), 1)[0]; S.hand[p].push(c); know(S, p, c); log(S, `${nm(S, opp)} gives ${nm(S, p)} a random card from their hand.`, {secret: c}); }
+      break;
+    }
     case 'buy': deplete(S, p, cost); yield* gainItem(S, p, c.item, S.market);
       if (isW(S, p, 'abragail')) {
-        const k = yield* ask(S, p, 'pick', 'Abragail: take a card from the Nest, or ready a Gem', cardOpts(S.nest, {zone: 'nest'}).concat({id: 'gem', label: 'Ready a Gem'}, {id: 'no', label: 'Neither'}));
+        const k = yield* ask(S, p, 'pick', e2(S) ? 'Abragail: take a card from the Nest?' : 'Abragail: take a card from the Nest, or ready a Gem', cardOpts(S.nest, {zone: 'nest'}).concat(e2(S) ? [] : [{id: 'gem', label: 'Ready a Gem'}], {id: 'no', label: e2(S) ? 'No thanks' : 'Neither'}));
         if (k.card) { S.nest.splice(S.nest.indexOf(k.card), 1); S.hand[p].push(k.card); know(S, p, k.card); log(S, `${nm(S, p)} takes ${ACTIONS[k.card].n} from the Nest.`); } else if (k.id === 'gem') ready(S, p, 1);
       } break;
     case 'hack': yield* doHack(S, p, c.hack); break;
@@ -355,7 +402,7 @@ function* gemPhase(S, p) {
 function* dragonCheck(S, p) {
   S.t.phase = 'dragon';
   let w = wings(S); const need = flightNeed(S);
-  if (has(S, p, 'thunderbox')) {
+  if (has(S, p, 'thunderbox') && !e2(S)) {
     const c = yield* ask(S, p, 'yn', `Dragon Check: ${w} Wings in the Nest (Flight at ${need}, Roost at 7 cards; there are ${S.nest.length}). Use Thunderbox?`, [{id: 0, label: 'Keep it'}, {id: 2, label: 'Add 2 Wings'}, {id: -2, label: 'Subtract 2 Wings'}]);
     if (c.id) { dropItem(S, p, 'thunderbox'); w += c.id; log(S, `Thunderbox: the Nest counts as ${w} Wings.`); }
   }
@@ -378,6 +425,8 @@ function* dragonCheck(S, p) {
     if (hadGelf) { S.gelf[q] = 0; S.gems[q]++; if (S.gelfR[q]) S.ready[q]++; log(S, `${nm(S, q)}’s Gem returns from the Dragon.`); ready(S, q, 1); }
     if (ev === 'flight') {
       if (isW(S, q, 'trevor')) ready(S, q, 1);
+      if (e2(S) && has(S, q, 'thunderbox')) { log(S, 'Thunderbox:'); yield* bump(S, q, 2); }
+      if (e2(S) && isW(S, q, 'robot')) yield* randomItem(S, q);
       if (isW(S, q, 'gelf') && !hadGelf && S.gems[q] > 0) {
         const o = [{id: 'no', label: 'No'}]; if (dep(S, q) > 0) o.push({id: 'd', label: 'Place a depleted Gem'}); if (S.ready[q] > 0) o.push({id: 'r', label: 'Place a ready Gem'});
         const c = yield* ask(S, q, 'yn', 'Gelf: place a Gem on the Dragon? (Flight needs +1 Wing and the opponent may not Teleport.)', o);
@@ -385,8 +434,9 @@ function* dragonCheck(S, p) {
       }
     } else {
       if (isW(S, q, 'trevor')) deplete(S, q, 1);
+      if (e2(S) && isW(S, q, 'robot') && S.items[q].length) { const c = yield* ask(S, q, 'item', 'Robot Boy, on Roost: lose which Item?', S.items[q].map(it => ({item: it, own: 1, label: ITEMS[it].n})), {show: 1}); dropItem(S, q, c.item); }
       if (isW(S, q, 'derby')) yield* teleport(S, q, 2, {why: 'Derby, on Roost'});
-      if (has(S, q, 'backpack')) ready(S, q, 3);
+      if (has(S, q, 'backpack') && !e2(S)) ready(S, q, 3);
       if (has(S, q, 'vr')) gainWhite(S, q, 2);
       if (isW(S, q, 'lori') && S.deck.length) {
         const u = [...new Set(S.deck)].sort();
@@ -404,10 +454,12 @@ function* dragonCheck(S, p) {
 function* turn(S, p) {
   S.turn++; S.t = {moveB: 0, bumpB: 0, noEscape: false, phase: 'start'}; S.lastEv = null;
   log(S, `— Turn ${S.turn}: ${nm(S, p)} —`);
+  if (!S.started) { S.started = 1; if (e2(S)) for (const q of [p, 1 - p]) if (isW(S, q, 'robot')) yield* randomItem(S, q); }
   if (S.away[p]) { S.away[p] = false; S.pos[p] = CENTER; if (isW(S, p, 'may')) S.wiz[p] = 'may2'; log(S, `${nm(S, p)} returns to the center tile as the Hacking Avenger.`); }
   if (isW(S, p, 'andromeda') && S.aside[p] > 0) { S.aside[p]--; S.gems[p]++; S.ready[p]++; log(S, `${nm(S, p)} gets a stacked Gem back, readied.`); }
   if (isW(S, p, 'venice') && S.pos[p] !== CENTER) yield* teleport(S, p, 1, {dir: Math.sign(CENTER - S.pos[p]), why: 'Venice, turn start'});
-  if (isW(S, p, 'abragail') && (S.ready[p] === 1 || S.ready[p] === 2)) { S.t.moveB++; S.t.bumpB++; log(S, `${nm(S, p)} has +1 Move and +1 Bump this turn.`); }
+  if (isW(S, p, 'eve') && e2(S) && !S.away[p] && tileColor(S.pos[p]) === 'P') { S.t.bumpB += 2; log(S, `${nm(S, p)} starts on a purple tile: +2 Bump this turn.`); }
+  if (isW(S, p, 'abragail') && (e2(S) ? S.ready[p] >= 2 : S.ready[p] === 1 || S.ready[p] === 2)) { S.t.moveB++; S.t.bumpB++; log(S, `${nm(S, p)} has +1 Move and +1 Bump this turn.`); }
   if (isW(S, p, 'december')) { const b = wings(S) <= 5 ? 2 : -2; S.t.bumpB += b; log(S, `${nm(S, p)} has ${b > 0 ? '+2' : '−2'} Bump this turn.`); }
   // Action Phase
   S.t.phase = 'action';
@@ -444,7 +496,7 @@ function* play(S) {
 
 /* ---------- setup ---------- */
 function newState(o = {}) {
-  const S = {seed: (o.seed != null ? o.seed : Math.floor(Math.random() * 2 ** 31)) | 0, turn: 0, cur: 0, dragon: 0, power: null, flights: 0,
+  const S = {ed: o.ed === 1 ? 1 : 2, started: 0, seed: (o.seed != null ? o.seed : Math.floor(Math.random() * 2 ** 31)) | 0, turn: 0, cur: 0, dragon: 0, power: null, flights: 0,
     deck: DECK.slice(), nest: [], hand: [[], []], pos: [9, 11], wiz: (o.wiz || ['derby', 'eve']).slice(), ready: [1, 1], gems: [3, 3], aside: [0, 0],
     items: [[], []], market: [], itemDeck: Object.keys(ITEMS), hacks: [], hackDeck: Object.keys(HACKS), hackDown: [[], []], white: [0, 0], supply: 8,
     known: [[], []], away: [false, false], gelf: [0, 0], gelfR: [0, 0], once: [0, 0], t: {moveB: 0, bumpB: 0, noEscape: false, phase: 'start'}, inPlay: [], winner: null, reason: null, last: null, lastEv: null, log: []};

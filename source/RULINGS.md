@@ -39,3 +39,20 @@ Where a card or the manual leaves room, the game does the following. Change any 
 - A card counts as seen by the other player when a hand is revealed (Insight, or Shockwave against a hand with no MOVE card) or when it is taken in the open: from the Nest, from a revealed hand, as Bill's gift or Dragon Power swap, or by Lori's search.
 - A seen card stays known until it leaves the hand. With two copies of a card and one of them known, playing one leaves the other known.
 - The CPU uses the same information and nothing more when it plans.
+
+**2nd Edition (on by default)**
+
+New matches use the 2nd Edition cards unless "2nd Edition rules" is unticked on the Play screen or in Options. The Daily Challenge, the tutorial and the Puzzles always use 2nd Edition. Ten cards differ so far; everything else is unchanged.
+
+| Card | 2nd Edition | Read as |
+|---|---|---|
+| Eve Williams | Turn start: on a purple tile, +2 Bump this turn | Checked once at turn start, always applied; her 1E Bump and Teleport bonuses are gone |
+| May Danaris | After Hacking: Teleport 1 or a White Gem. Gem Action on a purple tile: Bump 1 and the opponent gives a random card | No Hack discount, no face-down Hacks, no reverse side. The Bump gains a White Gem as usual. The card is picked at random by the game; the giver knows which card it was |
+| Robot Boy | Game start and Flight: gain a random Item. Roost: lose 1 Item of your choice | "Random" is the top of the shuffled Item Deck, not the Market. Any Flight or Roost counts, on either player's turn. His 1E powers are gone |
+| Abragail | 2 or 3 ready Gems for +1 Move, +1 Bump. After buying: may take a Nest card | The "or ready a Gem" choice is gone |
+| Roller Skates | +1 Move | Either direction |
+| Cool Backpack | When you ready from a green Gem tile, ready again | Applies to the "ready a Gem" Gem Action; nothing on Roost |
+| Techno-Cutlass | Opponent lands on an End or Gem tile: they deplete a Gem and discard a White Gem | No +1 Bump. The White Gem returns to the supply |
+| Accursed Loom | Its Bump gains no White Gem | |
+| Thunderbox | On Flight: Bump 2 | Its owner Bumps on any Flight and keeps the Item; the Dragon Check choice is gone. The Bump gains a White Gem |
+| chip tune lullaby | Opponent may reveal and reshuffle a 2-Wing card; if they don't, gain a free Item | 2-Wing cards: Fireball, Flame Arrow, Magic Dart, Transfer, Checkmate. The free Item is chosen from the Market |

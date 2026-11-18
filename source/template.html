@@ -197,13 +197,16 @@ const IMG = /*IMGS*/{};
 const MANUAL_PAGES = /*MANUAL_PAGES*/0;
 'use strict';
 const $ = s => document.querySelector(s), esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const im = id => IMG[id] || '';
+/* Which edition's cards to show: the running match's, otherwise the setting (the Card Library can override it). */
+let viewEd = 0;
+const curEd = () => M ? (M.G.S.ed === 2 ? 2 : 1) : viewEd || (P.opt.ed2 ? 2 : 1);
+const im = id => (curEd() === 2 && IMG[id + '_2e']) || IMG[id] || '';
 const face = w => im('face_' + w);
 const cardImg = (kind, id) => im(kind === 'wiz' ? 'wz_' + id : kind === 'item' ? 'it_' + id : kind === 'hack' ? 'hk_' + id : id);
 const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 /* ---------- profile (saved in this browser) ---------- */
-const DEF = {opt: {speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, elo: 1000, bestElo: 1000, rankGames: 0, daily: {}, pz: {}, trophies: 0, tutDone: false, seen: {}};
+const DEF = {opt: {ed2: true, speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, elo: 1000, bestElo: 1000, rankGames: 0, daily: {}, pz: {}, trophies: 0, tutDone: false, seen: {}};
 let P = clone(DEF), MEM = {};
 const store = {get(k) { try { return localStorage.getItem(k); } catch (e) { return MEM[k] || null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { MEM[k] = v; } }, del(k) { try { localStorage.removeItem(k); } catch (e) {} delete MEM[k]; }};
 function loadProf() { try { const j = JSON.parse(store.get('db_profile') || 'null'); if (j) { P = Object.assign(clone(DEF), j); P.opt = Object.assign(clone(DEF.opt), j.opt); } } catch (e) {} }
@@ -220,17 +223,17 @@ const SFX = {card: () => beep(520, .08), move: () => beep(340, .12, 'sine', .08,
 /* ---------- screens and overlays ---------- */
 function show(id) { for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id; if (id !== 'game') { $('#coach').hidden = true; } }
 function openOv(html, cls) { $('#sheet').className = 'sheet ' + (cls || ''); $('#sheet').innerHTML = html; $('#ov').classList.add('show'); const f = $('#sheet').querySelector('[autofocus],button'); if (f) f.focus(); }
-function closeOv() { $('#ov').classList.remove('show'); zoomCb = null; }
+function closeOv() { $('#ov').classList.remove('show'); zoomCb = null; viewEd = 0; }
 let zoomCb = null;
 function zoom(src, title, text, choose) {
   zoomCb = choose ? choose.fn : null;
   openOv(`<img src="${src}" alt="${esc(title || '')}">${title ? `<h3>${esc(title)}</h3>` : ''}${text ? `<p>${text}</p>` : ''}<div class="acts">${choose ? `<button class="btn pri" data-a="zoomok" autofocus>${esc(choose.label)}</button>` : ''}<button class="btn" data-a="close">${choose ? 'Cancel' : 'Close'}</button></div>`, 'zoom');
 }
-const wizText = w => `<b>${esc(WIZ[w].title)}</b><br>` + WIZ[w].t.map(esc).join('<br>');
+const wizText = w => `<b>${esc(WIZ[w].title)}</b><br>` + wizLines(w, curEd()).map(esc).join('<br>');
 function zoomThing(kind, id, choose) {
   if (kind === 'wiz') return zoom(im('wz_' + id), WIZ[id].n, wizText(id), choose);
-  if (kind === 'item') return zoom(im('it_' + id), ITEMS[id].n, esc(ITEMS[id].t), choose);
-  if (kind === 'hack') return zoom(im('hk_' + id), HACKS[id].n, `Cost: ${HACKS[id].cost} White Gems. ` + esc(HACKS[id].t), choose);
+  if (kind === 'item') return zoom(im('it_' + id), ITEMS[id].n, esc(itemText(id, curEd())), choose);
+  if (kind === 'hack') return zoom(im('hk_' + id), HACKS[id].n, `Cost: ${HACKS[id].cost} White Gems. ` + esc(hackText(id, curEd())), choose);
   return zoom(im(id), ACTIONS[id].n, esc(ACTIONS[id].t) + `<br><span class="lbl">Wings: ${ACTIONS[id].w} · Dragon Power: ${esc(ACTIONS[id].pw || 'none')}</span>`, choose);
 }
 
@@ -242,7 +245,7 @@ function namesFor(wiz) { const a = WIZ[wiz[0]].s, b = WIZ[wiz[1]].s; return a ==
 function startMatch(cfg) {
   let G;
   if (cfg.puzzle) { G = Game.resume(cfg.puzzle.snap, [], []); }
-  else { const S = newState({wiz: cfg.wiz, seed: cfg.seed, first: cfg.first, names: namesFor(cfg.wiz)}); G = new Game(S); }
+  else { const S = newState({wiz: cfg.wiz, seed: cfg.seed, first: cfg.first, names: namesFor(cfg.wiz), ed: cfg.ed === 1 ? 1 : 2}); G = new Game(S); }
   M = {G, cfg, busy: false, fresh: true, id: Date.now()};
   $('#ticker').textContent = cfg.puzzle ? 'Find the forced win.' : ''; show('game'); closeOv(); saveMatch(); render(); pump();
 }
@@ -300,7 +303,7 @@ function barHtml(S, p) {
   const seen = M.cfg.puzzle ? S.hand[p] : knownOf(S, p), hid = S.hand[p].length - seen.length;   // cards you have seen stay face-up
   const hand = p === HUMAN ? '' : seen.map(c => `<button class="cardb" data-a="zoomcard" data-id="${c}" data-peek="${c}" title="You know ${esc(nm(S, p))} holds this"><img src="${im(c)}" alt="${esc(ACTIONS[c].n)}"></button>`).join('') + (hid ? `<span class="backs" title="${hid} unknown card${hid > 1 ? 's' : ''}">${Array(hid).fill(`<img src="${im('back')}" alt="">`).join('')}</span>` : '');
   return `<button class="face" data-a="zoomwiz" data-id="${w}" data-peek="wz_${w}" aria-label="${esc(WIZ[w].n)}: read powers"><img src="${face(w)}" alt=""></button>
-    <div class="who"><b>${p === HUMAN ? 'You · ' : ''}${esc(WIZ[w].n)}</b><span class="lbl">${p === HUMAN ? esc(WIZ[w].title) : (M.cfg.oppName ? esc(M.cfg.oppName) + ' · ' : '') + (M.cfg.puzzle ? 'Puzzle opponent' : 'CPU · ' + LEVEL_NAMES[M.cfg.level])}</span></div>
+    <div class="who"><b>${p === HUMAN ? 'You · ' : ''}${esc(WIZ[w].n)}</b><span class="lbl">${p === HUMAN ? esc(WIZ[w].title) : (M.cfg.oppName ? esc(M.cfg.oppName) + ' · ' : '') + (M.cfg.puzzle ? 'Puzzle opponent' : 'CPU · ' + LEVEL_NAMES[M.cfg.level] + (S.ed === 2 ? '' : ' · 1st Edition'))}</span></div>
     ${gemsHtml(S, p)}${hd}<div class="oppinfo">${hand}</div><div class="items">${it}</div>
     ${p === HUMAN ? `<button class="iconbtn" data-a="tip" id="tipbtn" ${M.cfg.tips ? '' : 'hidden'}>Tip</button><button class="iconbtn" data-a="log">Log</button><button class="iconbtn" data-a="menu">Menu</button>` : ''}`;
 }
@@ -498,7 +501,7 @@ function seedFrom(str) { let h = 2166136261; for (const c of str) { h ^= c.charC
 function dailyToday() { const day = todayKey(), h = seedFrom('dragonbridge' + day), me = WIZ_IDS[h % 15], opp = WIZ_IDS[(h >>> 8) % 15 === h % 15 ? ((h >>> 8) + 1) % 15 : (h >>> 8) % 15], level = ['normal', 'normal', 'hard', 'hard', 'expert'][(h >>> 16) % 5]; return {day, seed: h & 0x7fffffff, wiz: [me, opp], level, first: (h >>> 20) & 1}; }
 function tourNew(wiz, level) {
   const others = WIZ_IDS.filter(w => w !== wiz).sort(() => Math.random() - .5).slice(0, 7), seats = [wiz].concat(others);
-  P.tour = {wiz, level, round: 0, rounds: [seats], me: 0, path: [0]}; saveProf();
+  P.tour = {wiz, level, ed: P.opt.ed2 ? 2 : 1, round: 0, rounds: [seats], me: 0, path: [0]}; saveProf();
 }
 function tourAdvance(T) {   // play out the other matches of the round just finished
   const cur = T.rounds[T.rounds.length - 1], next = [];
@@ -511,13 +514,13 @@ function bracketHtml(T) {
 }
 function launch() {
   const o = P.opt, mode = o.mode, me = o.wiz;
-  if (mode === 'versus') return startMatch({mode, wiz: [me, o.opp === 'random' ? randWiz(me) : o.opp], level: o.level, tips: o.tips});
+  if (mode === 'versus') return startMatch({mode, wiz: [me, o.opp === 'random' ? randWiz(me) : o.opp], level: o.level, tips: o.tips, ed: o.ed2 ? 2 : 1});
   if (mode === 'tour') { if (!P.tour) tourNew(me, o.level); return tourGo(); }
   if (mode === 'ranked') return rankGo();
   if (mode === 'daily') { const d = dailyToday(); return startMatch({mode, wiz: d.wiz, level: d.level, seed: d.seed, first: d.first, day: d.day}); }
 }
-function tourGo() { const T = P.tour, lv = T.level, up = {easy: 'normal', normal: 'hard', hard: 'expert', expert: 'expert'}; startMatch({mode: 'tour', wiz: [T.wiz, tourOpp(T)], level: T.round === 2 ? up[lv] : lv}); }
-function rankGo() { const r = rankOf(P.elo), oppElo = Math.max(700, P.elo + Math.round((Math.random() - .5) * 160)), ro = rankOf(oppElo); startMatch({mode: 'ranked', wiz: [P.opt.wiz, randWiz()], level: levelForRank(ro), oppElo, oppName: BOTS[Math.floor(Math.random() * BOTS.length)] + ' (' + oppElo + ')'}); }
+function tourGo() { const T = P.tour, lv = T.level, up = {easy: 'normal', normal: 'hard', hard: 'expert', expert: 'expert'}; startMatch({mode: 'tour', wiz: [T.wiz, tourOpp(T)], level: T.round === 2 ? up[lv] : lv, ed: T.ed === 1 ? 1 : 2}); }
+function rankGo() { const r = rankOf(P.elo), oppElo = Math.max(700, P.elo + Math.round((Math.random() - .5) * 160)), ro = rankOf(oppElo); startMatch({mode: 'ranked', ed: P.opt.ed2 ? 2 : 1, wiz: [P.opt.wiz, randWiz()], level: levelForRank(ro), oppElo, oppName: BOTS[Math.floor(Math.random() * BOTS.length)] + ' (' + oppElo + ')'}); }
 function puzzleGo(id) { const z = PUZZLES.find(x => x.id === +id); startMatch({mode: 'puzzle', puzzle: z, wiz: z.snap.wiz, level: 'expert'}); }
 
 function drawSetup() {
@@ -526,22 +529,23 @@ function drawSetup() {
   let h = `<div class="row"><button class="btn sm" data-a="totitle">← Title</button><h2>Play</h2></div>
     <div class="row"><b>Mode</b><span class="seg">${modes.map(([m, l]) => `<button class="btn sm" data-a="setmode" data-v="${m}" aria-pressed="${m === mode}">${l}</button>`).join('')}</span></div>`;
   const pickRow = (cur, act, withRandom) => `<div class="picks">${withRandom ? `<button class="pick" data-a="${act}" data-v="random" aria-pressed="${cur === 'random'}"><img src="${im('logo')}" alt=""><div><b>Random</b><span>any Wizard</span></div></button>` : ''}${WIZ_IDS.map(w => `<button class="pick" data-a="${act}" data-v="${w}" aria-pressed="${cur === w}"><img src="${face(w)}" alt=""><div><b>${esc(WIZ[w].s)}</b><span>${esc(WIZ[w].title)}</span></div></button>`).join('')}</div>`;
+  const edBox = `<label class="row" style="gap:6px"><input type="checkbox" id="opt-ed2" data-t="ed2" ${o.ed2 ? 'checked' : ''}> <b>2nd Edition rules</b> <span class="lbl">the updated cards; untick for the printed 1st Edition</span></label>`;
   const levels = `<div class="row"><b>CPU</b><span class="seg">${Object.keys(LEVEL_NAMES).map(l => `<button class="btn sm" data-a="setlevel" data-v="${l}" aria-pressed="${o.level === l}">${LEVEL_NAMES[l]}</button>`).join('')}</span></div>`;
-  const wizInfo = w => `<div class="info"><b>${esc(WIZ[w].n)}</b> <span class="lbl">${esc(WIZ[w].title)}</span> <button class="btn sm" data-a="zoomwiz" data-id="${w}">See card</button><ul>${WIZ[w].t.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
+  const wizInfo = w => `<div class="info"><b>${esc(WIZ[w].n)}</b> <span class="lbl">${esc(WIZ[w].title)}</span> <button class="btn sm" data-a="zoomwiz" data-id="${w}">See card</button><ul>${wizLines(w, curEd()).map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
   if (mode === 'versus') {
-    h += `<div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Start match</button>${levels}<label class="row" style="gap:6px"><input type="checkbox" id="opt-tips" data-t="tips" ${o.tips ? 'checked' : ''}> <b>Expert Tips</b> <span class="lbl">ask the Expert CPU what it would do</span></label></div>
+    h += `<div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Start match</button>${levels}<label class="row" style="gap:6px"><input type="checkbox" id="opt-tips" data-t="tips" ${o.tips ? 'checked' : ''}> <b>Expert Tips</b> <span class="lbl">ask the Expert CPU what it would do</span></label>${edBox}</div>
       <h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}<h3>Opponent</h3>${pickRow(o.opp, 'setopp', true)}${o.opp !== 'random' ? wizInfo(o.opp) : ''}`;
   } else if (mode === 'tour') {
     const T = P.tour;
     h += T ? `<div class="info"><b>Tournament in progress</b> · ${['Quarterfinal', 'Semifinal', 'Final'][T.round]} vs ${esc(WIZ[tourOpp(T)].n)}</div>${bracketHtml(T)}<div class="row"><button class="btn pri" data-a="tourgo">Play ${['Quarterfinal', 'Semifinal', 'Final'][T.round]}</button><button class="btn" data-a="tourquit">Abandon Tournament</button></div>`
-      : `<p class="lbl" style="margin:0">Eight Wizards, single elimination. Win three matches to take the trophy. The Final is one difficulty level harder.</p><div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Start Tournament</button>${levels}</div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
+      : `<p class="lbl" style="margin:0">Eight Wizards, single elimination. Win three matches to take the trophy. The Final is one difficulty level harder.</p><div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Start Tournament</button>${levels}${edBox}</div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
   } else if (mode === 'ranked') {
     const r = rankOf(P.elo);
     h += `<div class="info"><b>Rank ${r}</b> of 10 · Elo ${P.elo} <span class="lbl">(best ${P.bestElo}, ${P.rankGames} games)</span><br><span class="lbl">Opponents are picked near your rating; higher ranks play stronger CPUs. Every 100 Elo is a rank.</span></div>
-      <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Find a match</button></div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
+      <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Find a match</button>${edBox}</div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
   } else if (mode === 'daily') {
     const d = dailyToday(), rec = P.daily[d.day];
-    h += `<div class="info"><b>${d.day}</b> · You are <b>${esc(WIZ[d.wiz[0]].n)}</b> against <b>${esc(WIZ[d.wiz[1]].n)}</b> (${LEVEL_NAMES[d.level]} CPU). Everyone gets the same Wizards and the same shuffle today.<br>${rec ? `Today: <b>${rec === 'W' ? 'Won' : 'Lost'}</b>.` : 'Not played yet.'} Streak: ${dailyStreak()}.</div>
+    h += `<div class="info"><b>${d.day}</b> · You are <b>${esc(WIZ[d.wiz[0]].n)}</b> against <b>${esc(WIZ[d.wiz[1]].n)}</b> (${LEVEL_NAMES[d.level]} CPU). Everyone gets the same Wizards and the same shuffle today, with 2nd Edition rules.<br>${rec ? `Today: <b>${rec === 'W' ? 'Won' : 'Lost'}</b>.` : 'Not played yet.'} Streak: ${dailyStreak()}.</div>
       <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">${rec ? 'Replay for fun' : 'Play today’s challenge'}</button></div>${wizInfo(d.wiz[0])}${wizInfo(d.wiz[1])}`;
   } else {
     h += `<p class="lbl" style="margin:0">Each puzzle has a forced win: escape this turn, or leave your opponent no way to avoid the Dragon on their next turn. Their hand is shown face-up.</p>
@@ -552,15 +556,16 @@ function drawSetup() {
 
 /* ---------- sheets ---------- */
 function librarySheet(tab = 'act') {
+  librarySheet.tab = tab; const ed = curEd();
   const tabs = [['act', 'Actions'], ['wiz', 'Wizards'], ['item', 'Items'], ['hack', 'Bridge Hacks'], ['other', 'Other']];
   const fig = (kind, id, name) => `<figure><button class="cardb" data-a="zoom${kind}" data-id="${id}" data-lib="${tab}"><img src="${cardImg(kind, id)}" alt="${esc(name)}"></button>${esc(name)}</figure>`;
   let g = '';
   if (tab === 'act') g = Object.keys(ACTIONS).map(c => fig('card', c, ACTIONS[c].n + (DECK.filter(x => x === c).length > 1 ? ' ×2' : ''))).join('');
-  if (tab === 'wiz') g = WIZ_IDS.map(w => fig('wiz', w, WIZ[w].n)).join('') + fig('wiz', 'may2', 'May (reverse)');
+  if (tab === 'wiz') g = WIZ_IDS.map(w => fig('wiz', w, WIZ[w].n)).join('') + (ed === 2 ? '' : fig('wiz', 'may2', 'May (reverse)'));
   if (tab === 'item') g = Object.keys(ITEMS).map(i => fig('item', i, ITEMS[i].n)).join('');
   if (tab === 'hack') g = Object.keys(HACKS).map(i => fig('hack', i, HACKS[i].n)).join('');
   if (tab === 'other') g = [['gem', 'Green Gem'], ['gemdep', 'Depleted Gem'], ['white', 'White Gem'], ['dragon', 'The Dragon'], ['ref', 'Turn reference']].map(([id, n]) => `<figure><button class="cardb" data-a="zoomimg" data-id="${id}" data-n="${n}"><img src="${im(id)}" alt="${n}"></button>${n}</figure>`).join('');
-  openOv(`<div class="row"><h2>Card Library</h2><span class="seg">${tabs.map(([t, l]) => `<button class="btn sm" data-a="libtab" data-v="${t}" aria-pressed="${t === tab}">${l}</button>`).join('')}</span></div><div class="grid">${g}</div><div class="acts"><button class="btn" data-a="close">Close</button></div>`);
+  openOv(`<div class="row"><h2>Card Library</h2><span class="seg">${tabs.map(([t, l]) => `<button class="btn sm" data-a="libtab" data-v="${t}" aria-pressed="${t === tab}">${l}</button>`).join('')}</span>${M ? `<span class="lbl">${ed === 2 ? '2nd' : '1st'} Edition (this match)</span>` : `<span class="seg">${[[2, '2nd Edition'], [1, '1st Edition']].map(([e, l]) => `<button class="btn sm" data-a="libed" data-v="${e}" aria-pressed="${e === ed}">${l}</button>`).join('')}</span>`}</div><div class="grid">${g}</div><div class="acts"><button class="btn" data-a="close">Close</button></div>`);
 }
 function statsSheet() {
   const rows = [], tot = {w: 0, l: 0};
@@ -577,6 +582,7 @@ function optionsSheet() {
   const o = P.opt;
   openOv(`<h2>Options</h2>
     <div class="row"><b>CPU animation</b><span class="seg">${[[1.6, 'Slow'], [1, 'Normal'], [.5, 'Fast'], [0, 'Instant']].map(([v, l]) => `<button class="btn sm" data-a="setspeed" data-v="${v}" aria-pressed="${o.speed === v}">${l}</button>`).join('')}</span></div>
+    <label class="row" style="gap:6px"><input type="checkbox" id="opt-ed2o" data-t="ed2" ${o.ed2 ? 'checked' : ''}> <b>2nd Edition rules</b> <span class="lbl">for new matches; a match in progress keeps its edition</span></label>
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-sound" data-t="sound" ${o.sound ? 'checked' : ''}> <b>Sound</b></label>
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-onetap" data-t="oneTap" ${o.oneTap ? 'checked' : ''}> <b>One-tap cards</b> <span class="lbl">play a card without the enlarged preview first</span></label>
     <div class="row"><button class="btn sm" data-a="wipe1">Erase all progress…</button></div>
@@ -616,6 +622,7 @@ document.addEventListener('click', ev => {
     case 'tutorial': startMatch({mode: 'versus', wiz: ['derby', 'eve'], level: 'easy', tutorial: true, first: 0, tips: true}); break;
     case 'library': librarySheet(); break;
     case 'libtab': librarySheet(v); break;
+    case 'libed': viewEd = +v; librarySheet(librarySheet.tab); break;
     case 'rulebook': rulebookSheet(); break;
     case 'stats': statsSheet(); break;
     case 'options': optionsSheet(); break;
@@ -641,7 +648,7 @@ document.addEventListener('click', ev => {
     case 'wipe2': store.del('db_profile'); store.del('db_save'); P = clone(DEF); toTitle(); break;
   }
 });
-document.addEventListener('change', ev => { const t = ev.target.dataset && ev.target.dataset.t; if (!t) return; P.opt[t] = ev.target.checked; saveProf(); });
+document.addEventListener('change', ev => { const t = ev.target.dataset && ev.target.dataset.t; if (!t) return; P.opt[t] = ev.target.checked; saveProf(); if (t === 'ed2' && !M) { if (!$('#setup').hidden) drawSetup(); if ($('#ov').classList.contains('show')) optionsSheet(); } });
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#ov').classList.contains('show')) closeOv(); else if (M && !M.G.over) menuSheet(); } });
 
 /* ---------- start ---------- */
