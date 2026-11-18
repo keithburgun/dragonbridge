@@ -62,7 +62,9 @@ function posVal(S, p) {
 }
 /* Scored at a turn boundary, from `me`'s side. S.cur is the player about to move. */
 function evalS(S, me) {
-  if (S.winner != null) return S.winner === me ? 1e6 - S.turn : S.winner === 1 - me ? -1e6 + S.turn : 0;
+  // Won or lost: sooner wins and later losses are better, and between equal ones the CPU still prefers to stand
+  // further from the Dragon with more Gems, so that even a doomed Wizard doesn't walk toward it.
+  if (S.winner != null) return S.winner === me ? 1e6 - 100 * S.turn : S.winner === 1 - me ? -1e6 + 100 * S.turn + (S.away[me] ? 0 : 20 * dragDist(S, me)) + 5 * S.ready[me] : 0;
   const o = 1 - me, m = S.cur;
   let v = EW.gem * (S.ready[me] - S.ready[o]) + EW.own * (S.gems[me] + S.aside[me] - S.gems[o] - S.aside[o]) + EW.item * (S.items[me].length - S.items[o].length)
     + EW.white * (S.white[me] - S.white[o]) + EW.card * (S.hand[me].length - S.hand[o].length) + posVal(S, me) - posVal(S, o);
@@ -98,7 +100,11 @@ function sampleChoose(G, L) {   // Easy
 function aiChoose(G, level) {
   const q = G.req, me = q.p, n = q.opts.length, L = LEVELS[level] || LEVELS.normal;
   if (n === 1) return 0;
-  if (Math.random() < L.blunder) return randPolicy(q);
+  if (Math.random() < L.blunder) {   // a careless pick, but never a step of its own toward the Dragon's Threatened tiles
+    const S = G.S, d = t => S.dragon === 0 ? t : LAST - t, here = S.away[me] ? 99 : dragDist(S, me);
+    const sane = q.opts.map((o, i) => i).filter(i => { const o = q.opts[i]; return !(o.tile != null && q.who === me && d(o.tile) <= 4 && d(o.tile) < here); });
+    return sane.length ? sane[Math.floor(Math.random() * sane.length)] : randPolicy(q);
+  }
   EW = L.w ? Object.assign({}, W0, L.w) : W0;
   if (L.sample) return sampleChoose(G, L);
   // still following the line worked out earlier this turn?
