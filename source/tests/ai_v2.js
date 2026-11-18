@@ -1,0 +1,153 @@
+'use strict';
+/* CPU players.
+   The CPU never looks at hidden cards: before it thinks ahead, the cards it can't see (your hand, apart from cards
+   it has been shown, and the deck) are reshuffled.
+   Normal and up look at every way to play out the rest of the turn (up to a budget) and score where each one
+   leaves them. Hard and Expert then take the most promising of those and work through the opponent's replies to
+   each, for several guesses at the opponent's hand, and pick the line whose worst case is best.
+   Easy plays out a handful of random lines and sometimes just picks at random. */
+const LEVELS = {
+  easy:   {sample: 10, blunder: 0.3, noise: 14},
+  normal: {own: 250,  top: 0,  dets: 0, opp: 0,   blunder: 0.05, noise: 5},
+  hard:   {own: 900,  top: 5,  dets: 2, opp: 220, blunder: 0,    noise: 0},
+  expert: {own: 3000, top: 10, dets: 4, opp: 700, blunder: 0,    noise: 0},
+};
+/* How far player p could get themself in one turn: best Action card plus a Gem teleport. Used to spot a Wizard who
+   cannot get out of the Threatened tiles. Generous on purpose (it ignores Hacks and Items that add more). */
+function selfReach(S, p) {
+  const h = S.hand[p], rdy = S.ready[p], tp = S.gelf[1 - p] ? 0 : 1;
+  const mb = S.t && S.cur === p ? 0 : 0, extra = (has(S, p, 'skates') ? (e2(S) ? 1 : 2) : 0) + (S.power === 'leap' ? 1 : 0) + (has(S, p, 'blink') ? 5 : 0)
+    + (isW(S, p, 'abragail') && (e2(S) ? rdy >= 2 : rdy === 1 || rdy === 2) ? 1 : 0) + (isW(S, p, 'may2') ? 1 : 0);
+  const robot1 = isW(S, p, 'robot') && !e2(S), tpn = k => tp * Math.max(0, k + tpBonus(S, p));
+  const one = c => c === 'hop' ? (robot1 ? 1 : 3) + extra : c === 'leap' ? (robot1 ? 1 : 2) + extra + (rdy > 0 ? tpn(2) : 0) : ACTIONS[c].move ? (robot1 ? 1 : 2) + extra : c === 'gale' ? tpn(1) : 0;
+  let best = 0, gemUsed = false;
+  for (const c of h) { const v = one(c); if (v > best) { best = v; gemUsed = c === 'leap' && rdy > 0; } }
+  if (h.includes('step')) { let b2 = 0, g2 = false; h.forEach(c => { if (c !== 'step') { const v = one(c); if (v > b2) { b2 = v; g2 = c === 'leap' && rdy > 0; } } }); if (tpn(1) + b2 > best) { best = tpn(1) + b2; gemUsed = g2; } }
+  let gem = rdy - (gemUsed ? 1 : 0) > 0 ? tpn(2) : 0;
+  if (S.hacks.includes('sk8') && S.white[p] >= hackCost(S, p, 'sk8')) gem = Math.max(gem, tpn(3));
+  if (S.hacks.includes('wyrm') && S.white[p] >= hackCost(S, p, 'wyrm')) gem = 99;
+  if (isW(S, p, 'venice')) best += tpn(1);
+  if (isW(S, p, 'bunny') && rdy > 0) gem = Math.max(gem, 3);
+  return best + gem;
+}
+const dragDist = (S, p) => S.dragon === 0 ? S.pos[p] : LAST - S.pos[p];   // 0 = the tile next to the Dragon, 20 = far end
+function canEscapeNow(S, p) {   // p is about to take a turn: is a win there for the taking?
+  if (S.away[p]) return false;
+  const d = dragDist(S, p), h = S.hand[p], mv = h.some(c => ACTIONS[c].move);
+  if (d >= 16) return mv || isW(S, p, 'gelf') && h.some(c => ACTIONS[c].bump);
+  if (isW(S, p, 'trevor')) return false;
+  return mv && h.includes('step') && !S.gelf[1 - p] && d + Math.max(0, 1 + tpBonus(S, p)) >= 16;
+}
+function trapped(S, p) { if (S.away[p]) return false; const d = dragDist(S, p); return d <= 4 && selfReach(S, p) < 5 - d; }
+function posVal(S, p) {
+  if (S.away[p]) return 5;
+  const d = dragDist(S, p);
+  if (d <= 4) return -(28 + 8 * (5 - d));
+  if (d >= 16) return 26 + (S.hand[p].some(c => ACTIONS[c].move) ? 40 : 0);
+  return (d - 10) * 2.6 - (d <= 7 ? (8 - d) * 3 : 0);
+}
+/* Scored at a turn boundary, from `me`'s side. S.cur is the player about to move. */
+function evalS(S, me) {
+  if (S.winner != null) return S.winner === me ? 1e6 - S.turn : S.winner === 1 - me ? -1e6 + S.turn : 0;
+  const o = 1 - me, m = S.cur;
+  let v = 4 * (S.ready[me] - S.ready[o]) + 1.5 * (S.gems[me] + S.aside[me] - S.gems[o] - S.aside[o]) + 9 * (S.items[me].length - S.items[o].length)
+    + (S.white[me] - S.white[o]) + 0.8 * (S.hand[me].length - S.hand[o].length) + posVal(S, me) - posVal(S, o);
+  if (canEscapeNow(S, m)) v += m === me ? 4e5 : -4e5;
+  else if (trapped(S, m)) v += m === me ? -4e5 : 4e5;
+  return v;
+}
+const randPolicy = q => Math.floor(Math.random() * q.opts.length);
+const sigOf = q => q.kind + '|' + q.p + '|' + q.opts.map(o => o.label).join('/');
+const stateKey = S => JSON.stringify([S.pos, S.ready, S.gems, S.aside, S.items, S.white, S.nest, S.power, S.dragon, S.hand, S.away, S.gelf, S.winner]);
+/* Every way the play can go from `decs` until `turns` turns have ended. `me` picks the best for itself, the other
+   player the worst for `me`. ctx.n is a node budget: once it is spent, each choice explores one random option.
+   ctx.leaves (optional) collects every end position reached. Returns {v, decs, sigs}. */
+function searchTurn(snap, decs, me, det, turns, ctx, sigs) {
+  const r = probe(snap, decs, turns, det);
+  if (!r.req) { const leaf = {v: evalS(r.S, me), decs, sigs, S: r.S}; if (ctx.leaves) ctx.leaves.push(leaf); return leaf; }
+  const q = r.req, mine = q.p === me, n = q.opts.length, s2 = sigs.concat(sigOf(q));
+  let best = null;
+  const tryOpt = i => { ctx.n--; const c = searchTurn(snap, decs.concat(i), me, det, turns, ctx, s2); if (!best || (mine ? c.v > best.v : c.v < best.v)) best = c; };
+  if (ctx.n <= 0) tryOpt(Math.floor(Math.random() * n));
+  else for (let i = 0; i < n; i++) { if (ctx.n <= 0 && best) break; tryOpt(i); if (ctx.stop && best && (mine ? best.v >= ctx.stop : false)) break; }
+  return best;
+}
+function sampleChoose(G, L) {   // Easy
+  const q = G.req, me = q.p, n = q.opts.length, per = Math.max(2, Math.ceil(L.sample / n));
+  let bi = 0, bv = -Infinity;
+  for (let i = 0; i < n; i++) for (let k = 0; k < per; k++) {
+    const S = simulate(G.snap, G.decs.concat(i), randPolicy, 1, {me, pts: {}});
+    const v = evalS(S, me) + (Math.random() - 0.5) * L.noise; if (v > bv) { bv = v; bi = i; }
+  }
+  return bi;
+}
+function aiChoose(G, level) {
+  const q = G.req, me = q.p, n = q.opts.length, L = LEVELS[level] || LEVELS.normal;
+  if (n === 1) return 0;
+  if (Math.random() < L.blunder) return randPolicy(q);
+  if (L.sample) return sampleChoose(G, L);
+  // still following the line worked out earlier this turn?
+  const at = G.decs.length, pl = G._plan;
+  if (pl && pl.snap === G.snap && pl.level === level && pl.me === me && pl.steps[at] && pl.steps[at].sig === sigOf(q) && pl.pre === G.decs.slice(0, pl.at).join()) {
+    let okp = true; for (let k = pl.at; k < at; k++) if (!pl.steps[k] || pl.steps[k].i !== G.decs[k]) { okp = false; break; }
+    if (okp && pl.steps[at].i < n) return pl.steps[at].i;
+  }
+  const mine = G.S.cur === me, det = {me, pts: {}};
+  if (!q.noDet) det.pts[at] = Math.floor(Math.random() * 2 ** 31);
+  const ctx = {n: L.own, leaves: []};
+  let best = searchTurn(G.snap, G.decs, me, det, 1, ctx, []);
+  if (L.noise) { for (const lf of ctx.leaves) lf.v += (Math.random() - 0.5) * L.noise; best = ctx.leaves.reduce((a, b) => b.v > a.v ? b : a); }
+  if (L.top && mine && best.S.winner == null) {
+    // the most promising distinct end positions, then the opponent's best reply to each
+    const seen = new Set(), cand = [];
+    for (const lf of ctx.leaves.slice().sort((a, b) => b.v - a.v)) { const k = stateKey(lf.S); if (seen.has(k)) continue; seen.add(k); cand.push(lf); if (cand.length >= L.top * 3) break; }
+    let done = 0, top = null;
+    for (const lf of cand) {
+      if (done >= L.top && !(top.v2 < -1e5 && done < L.top * 3)) break;
+      done++;
+      if (lf.S.winner != null) { lf.v2 = lf.v; } else {
+        let sum = 0;
+        for (let d = 0; d < L.dets; d++) {
+          const det2 = {me, pts: Object.assign({}, det.pts)}; det2.pts[lf.decs.length] = Math.floor(Math.random() * 2 ** 31);
+          sum += searchTurn(G.snap, lf.decs, me, det2, 2, {n: L.opp}, []).v;
+        }
+        lf.v2 = 0.85 * sum / L.dets + 0.15 * Math.max(-1e4, Math.min(1e4, lf.v));
+      }
+      if (!top || lf.v2 > top.v2) top = lf;
+    }
+    best = top;
+  }
+  const steps = {}; for (let k = at; k < best.decs.length; k++) steps[k] = {i: best.decs[k], sig: best.sigs[k - at]};
+  G._plan = {snap: G.snap, level, me, at, pre: G.decs.join(), steps};
+  return best.decs[at];
+}
+
+/* ---------- exact search, for puzzles ---------- */
+function probe(snap, decs, turns, det) {   // replay decs; stop at the next choice, or after `turns` turns. det: see simulate()
+  const S = clone(snap), g = play(S); let r = g.next(), n = 0, i = 0;
+  for (;;) {
+    if (r.done) return {S, req: null};
+    const q = r.value;
+    if (q.kind === 'turn') { if (++n > turns) return {S, req: null}; r = g.next(); continue; }
+    if (det && det.pts[i] != null && !q.noDet) determinize(S, det.me, det.pts[i]);
+    if (i >= decs.length) return {S, req: q, turnNo: n};
+    r = g.next(decs[i++]);
+  }
+}
+/* Can `me` force a win within `turns` turns of the snapshot (default: before the end of the opponent's next turn),
+   whatever the opponent does? ctx = {n: node budget} */
+function forcedWin(snap, decs, me, ctx, turns = 2) {
+  if (--ctx.n < 0) { ctx.cut = true; return false; }
+  const r = probe(snap, decs, turns);
+  if (r.S.winner === me) return true;
+  if (r.S.winner != null || !r.req) return false;
+  const mine = r.req.p === me;
+  for (let i = 0; i < r.req.opts.length; i++) { const w = forcedWin(snap, decs.concat(i), me, ctx, turns); if (mine && w) return true; if (!mine && !w) return false; }
+  return !mine;
+}
+/* The puzzle opponent, on its own turn: any choice that still lets it survive the turn, if there is one. */
+function puzzleReply(G, me) {
+  const q = G.req, own = G.S.cur !== me;
+  for (let i = 0; i < q.opts.length; i++) { const ctx = {n: 20000}; if (!forcedWin(G.snap, G.decs.concat(i), me, ctx, own ? 1 : 2) && !ctx.cut) return i; }
+  return 0;
+}

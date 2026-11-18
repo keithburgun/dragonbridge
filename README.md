@@ -34,6 +34,7 @@ Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-play
     python3 build.py                       # writes dist/dragonbridge.html, ../www/index.html, tests/eng_all.js
     node tests/fuzz.js 6                   # 1,350 random games across every Wizard pair; must not crash or lose a card
     node tests/ladder.js hard normal 30    # CPU ladder: the first level should win more
+    tests/arena_par.sh expert v1:expert 60 2   # current CPU vs the first-release CPU (tests/ai_v1.js), 120 games on 2 cores
     node tests/browser_check.js 1280 800   # plays every mode in a real browser (needs Playwright); also try 390 780
     node tests/ed2.js                      # each 2nd Edition card change
     node tests/browser_ed.js               # the 2nd Edition setting in a browser
