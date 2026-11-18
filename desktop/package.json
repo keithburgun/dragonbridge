@@ -13,7 +13,7 @@
   "build": {
     "appId": "com.dragonbridge.game",
     "productName": "Dragon Bridge",
-    "files": ["main.js", "icon.ico", "icon.png", "app/**/*"],
+    "files": ["main.js", "preload.js", "icon.ico", "icon.png", "app/**/*"],
     "directories": { "output": "dist" },
     "win": { "target": [{ "target": "portable", "arch": ["x64"] }], "icon": "icon.ico" },
     "portable": { "artifactName": "DragonBridge-${version}.exe" },

@@ -9,13 +9,16 @@ Open `www/index.html` (or `source/dist/dragonbridge.html`) in a browser to play.
 - 2nd Edition rules, on by default, with a setting to play the printed 1st Edition. The changed cards are listed in `source/RULINGS.md`; add new 2E faces with `tools/add_2e.py`.
 - The bridge lies sideways; Wizards and the Dragon are circular face tokens.
 - CPU opponents: Easy, Normal, Hard, Expert. Optional Expert Tips.
-- Modes: Versus, Tournament (8 Wizards, single elimination), Ranked (Elo, ranks 1–10), Daily Challenge, Puzzles (9 hand-built positions that each teach one thing, with a named goal such as "Escape in 2 turns!"; they use the normal rules, full hands and normal draws, with the deck order scripted; each is proved solvable, and proved unsolvable without its lesson).
+- Modes: Versus, Tournament (8 Wizards, single elimination), Ranked (Elo, ranks 1–10; every Wizard has its own rating, and so does playing Random), Daily Challenge, Puzzles (9 hand-built positions that each teach one thing, with a named goal such as "Escape in 2 turns!"; they use the normal rules, full hands and normal draws, and each player's draws are scripted so they come in the same order whatever anyone plays; each is proved solvable, and proved unsolvable without its lesson).
 - How to Play (coached first match), Card Library, Rulebook (the printed manual), Stats and Achievements, Options, match log, save and continue.
 
 - Undo for your own choices this turn, until something hidden is revealed. Mobile View (Options) plays in a phone-shaped portrait layout on any screen.
 
 Not ported from Spellstorm yet: online play and accounts, the Linux / Steam / Reddit builds, in-app updates, translations, controller prompts, replays.
 Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-player). Mirror matches (both players as the same Wizard) are not offered anywhere.
+
+- Optional account (Options → Account): sign in to keep stats, Ranked ratings, achievements, puzzles and settings in sync across devices. See "Accounts and sync" below.
+- The Android app and the Windows .exe update themselves: the title screen shows **Update Available!** when a newer release exists.
 
 ## Layout
 
@@ -30,6 +33,9 @@ Left out on purpose: Free-for-All, Co-op and Two-on-Two (Dragon Bridge is 2-play
 | `source/RULINGS.md` | How the cards were read where the text leaves room |
 | `www/index.html` | The built game |
 | `desktop/`, `capacitor.config.json`, `branding/` | The Windows (Electron) and Android (Capacitor) wrappers and their icons |
+| `branding/java/` | The Android app's activity and its updater plugin (downloads the new APK and opens Android's installer) |
+| `docs/supabase_setup.sql` | The one-time database setup for account sync |
+| `PRIVACY.md` | The privacy policy |
 | `source/fonts/` | Fira Sans and Cormorant Garamond (SIL Open Font License), embedded in the page |
 
 ## Releases (GitHub Actions → itch.io)
@@ -55,6 +61,27 @@ After the first upload, on the itch.io page's Edit screen: tick "This file will 
 
 App icons and splash screens come from `source/tools/make_branding.py`.
 
+## Accounts and sync
+
+Signing in is optional and works the way it does in Spellstorm, with the same Supabase project, so a player has one account for both games. Dragon Bridge keeps its save data in its own table, `dragonbridge_saves`: one private row per account.
+
+**One-time setup:** open the Supabase project → SQL Editor, paste `docs/supabase_setup.sql` and run it. Until that table exists, signing in works but the game says "Account sync isn't switched on for Dragon Bridge yet" and keeps progress on the device.
+
+- What syncs: stats, Ranked ratings, achievements, trophies, puzzles, Daily results, a Tournament in progress, and most options. Mobile View and Sound stay per device. A match in progress stays on the device.
+- If two devices both played before syncing, the results are merged: wins, losses and games add up; ratings and settings take the more recent value; achievements keep their earliest date.
+- Signing out leaves everything in the account and returns the device to a fresh guest profile. "Erase all progress" while signed in also empties the account's copy.
+- The project URL, publishable key and table name are at `SUPA` in `source/template.html`. To use a separate Supabase project, change them there and run the same SQL in that project.
+- Password-reset and confirmation emails come from that Supabase project, so they use its email templates and its Site URL (Authentication → URL Configuration).
+- Sync is on in the apps, the itch.io page and `dist/dragonbridge.html`. It is off in `dist/page.html` (the claude.ai version), which has no network access.
+
+## In-app updates
+
+The Android app and the Windows .exe ask GitHub for the latest release of this repository when the title screen opens (at most every few minutes). If it is newer than the running version, the title screen shows **Update Available!** and Options shows an Updates box.
+
+- Windows: the portable .exe downloads the new one, replaces itself in place and restarts (`desktop/main.js`).
+- Android: the app downloads the new APK and opens Android's installer, which asks the player to confirm (`branding/java/UpdaterPlugin.java`). This only works when every release is signed with the same key, so `ANDROID_KEYSTORE` must be set.
+- Only files from this repository's own releases are accepted. The browser versions are always current and show no update prompts.
+
 ## Build and test
 
     cd source
@@ -70,5 +97,7 @@ App icons and splash screens come from `source/tools/make_branding.py`.
     node tests/browser_drama.js            # slides, the Dragon's Flight arc, escape and pounce endings
     node tests/browser_view.js             # Mobile View and Undo
     node tests/browser_ui.js               # drag-to-play, hover preview, Buy / Hack menus, side log
+    node tests/puzzle_draws.js             # puzzle draws come in the same order whatever is played
+    node tests/browser_sync.js             # Ranked ratings, account sync (against tests/supa_mock.js), update prompts
 
 Needs Python 3.9+ and Node 18+. Rebuilding the images needs Pillow and the four print sheets.

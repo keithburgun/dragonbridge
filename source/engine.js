@@ -102,7 +102,18 @@ const clampT = i => Math.max(0, Math.min(LAST, i));
 
 /* ---------- small helpers ---------- */
 function rnd(S) { let t = S.seed = (S.seed + 0x6D2B79F5) | 0; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }
-function shuffle(S, a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd(S) * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+/* Puzzles script the draws: S.script[p] lists, in order, the cards player p will draw. Nothing either player does
+   changes that order: a scripted card is taken from wherever it is in the deck (one that is no longer there is skipped),
+   and shuffling the deck in a puzzle just puts it in a fixed order. */
+function drawCard(S, p) {
+  const q = S.script && S.script[p];
+  while (q && q.length) { const c = q.shift(), i = S.deck.lastIndexOf(c); if (i >= 0) return S.deck.splice(i, 1)[0]; }
+  return S.deck.pop();
+}
+function shuffle(S, a) {
+  if (S.script && a === S.deck) return a.sort((x, y) => DECK.indexOf(y) - DECK.indexOf(x) || 0);
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd(S) * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a;
+}
 const clone = o => JSON.parse(JSON.stringify(o));
 const END = {end: true};
 function log(S, m, x) { if (S.log) S.log.push(Object.assign({t: S.turn, p: S.cur, m}, x)); }
@@ -497,7 +508,7 @@ function* turn(S, p) {
   S.t.phase = 'draw';
   if (S.power === 'dart' && !S.away[p]) yield* teleport(S, p, 1, {dir: S.dragon === 0 ? 1 : -1, why: 'Dragon Power (Magic Dart)'});
   trimKnown(S);
-  let n = 0; while (S.hand[p].length < 4 && S.deck.length) { S.hand[p].push(S.deck.pop()); n++; S.rev++; }
+  let n = 0; while (S.hand[p].length < 4 && S.deck.length) { S.hand[p].push(drawCard(S, p)); n++; S.rev++; }
   if (n) log(S, `${nm(S, p)} draws ${n} card${n > 1 ? 's' : ''}.`);
 }
 function* play(S) {

@@ -106,7 +106,8 @@ body.mview{background:var(--out)}
 .tok.opp .you{background:var(--orange);bottom:auto;top:-13px}
 #dragon{position:absolute;top:50%;left:0;width:var(--dw);transform:translateY(-50%);z-index:4}
 #dragon.flying #dpower{visibility:hidden}
-#dragon .dfly{display:flex;flex-direction:column;align-items:center;gap:4px}   /* the part that flies and pounces */
+#dragon .dfly{display:flex;flex-direction:column;align-items:center;gap:4px}   /* the part that flies over the bridge (a pounce moves only .dface) */
+#dragon .dface{position:relative;z-index:1}
 #dragon.s1{left:100%;translate:-100% 0}
 #dragon .dface{width:100%;aspect-ratio:1;border-radius:50%;border:4px solid var(--bad);box-shadow:0 0 22px #ff3b3b99,0 4px 10px #000c;background:none;padding:0;cursor:pointer}
 #dragon .dface img{width:100%;height:100%;border-radius:50%;display:block}
@@ -143,6 +144,14 @@ body.mview{background:var(--out)}
 #splash b{display:block;margin-top:6px;background:#000c;border-radius:8px;padding:2px 8px}
 #banner{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:41;font:italic 700 clamp(2rem,8cqw,4rem)/1 var(--disp);color:var(--gold);text-shadow:0 4px 0 #7a2a12,0 0 30px #000;opacity:0;pointer-events:none;transition:opacity .3s;text-align:center}
 #banner.on{opacity:1}
+#toast{position:absolute;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);z-index:70;max-width:min(92%,460px);background:var(--panel2);border:1px solid var(--gold2);border-radius:12px;padding:.6em 1em;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;box-shadow:0 8px 24px #000c}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.acctform{display:grid;gap:10px;width:min(360px,100%);margin:0 auto}.acctform label{display:grid;gap:4px;font-weight:600;font-size:.9rem}
+.acctform input{font:inherit;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:inherit;min-width:0}
+.acctform p{margin:0}.acok{color:var(--good);font-weight:600}.acerr{color:var(--bad);font-weight:600}
+.qlink{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}.qlink:hover{text-decoration-style:solid}
+.updbar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin:6px 0}.updbar span{display:block;height:100%;background:var(--gold);transition:width .2s}
+.tbtn.upd{background:linear-gradient(#8ff07e,#3fbf7a);color:#06250f;border-color:#d6ffcc}.tbtn.upd:disabled{opacity:.8;cursor:default}
 #banner div{white-space:nowrap} #banner .l2{font-size:1.25em;color:#fff3df;margin-top:.15em;animation:pop .45s cubic-bezier(.3,1.6,.5,1)} @keyframes pop{from{transform:scale(.3);opacity:0}}
 #banner.big{top:40%;font-size:clamp(1.5rem,6.2cqw,3.4rem);background:radial-gradient(closest-side,#000d 55%,#0000);padding:1.4em 2.4em}
 #coach{position:fixed;left:50%;bottom:calc(var(--card)*1.36 + 90px);transform:translateX(-50%);z-index:45;background:#fff3df;color:#2a0710;border-radius:14px;padding:10px 14px;max-width:min(92cqw,520px);box-shadow:0 10px 30px #000c;border:3px solid var(--gold2)}
@@ -172,6 +181,7 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
     <h1>Dragon Bridge</h1>
     <p class="lbl" style="margin:0">Escape the bridge, or push your rival into the Dragon.</p>
     <nav class="tmenu" aria-label="Main menu">
+      <button class="tbtn upd" data-a="updgo" id="updbtn" hidden>Update Available!</button>
       <button class="tbtn pri" data-a="cont" id="contbtn" hidden>Continue match</button>
       <button class="tbtn pri" data-a="play" id="playbtn">Play</button>
       <button class="tbtn" data-a="tutorial">How to Play</button>
@@ -198,6 +208,7 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
   </section>
   <div id="splash" aria-hidden="true"><img alt=""><b></b></div>
   <div id="banner" aria-hidden="true"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
   <div id="coach" hidden></div>
   <div id="peek" aria-hidden="true"><img alt=""></div>
   <div class="ov" id="ov" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
@@ -220,11 +231,28 @@ const cardImg = (kind, id) => im(kind === 'wiz' ? 'wz_' + id : kind === 'item' ?
 const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 /* ---------- profile (saved in this browser) ---------- */
-const DEF = {opt: {mview: false, ed2: true, speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, elo: 1000, bestElo: 1000, rankGames: 0, daily: {}, pz2: {}, trophies: 0, tutDone: false, seen: {}};
+const DEF = {opt: {mview: false, ed2: true, speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, rk: {}, daily: {}, pz2: {}, trophies: 0, tutDone: false, seen: {}};
 let P = clone(DEF), MEM = {};
 const store = {get(k) { try { return localStorage.getItem(k); } catch (e) { return MEM[k] || null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { MEM[k] = v; } }, del(k) { try { localStorage.removeItem(k); } catch (e) {} delete MEM[k]; }};
-function loadProf() { try { const j = JSON.parse(store.get('db_profile') || 'null'); if (j) { P = Object.assign(clone(DEF), j); P.opt = Object.assign(clone(DEF.opt), j.opt); } } catch (e) {} }
-const saveProf = () => store.set('db_profile', JSON.stringify(P));
+/* Ranked keeps one rating per Wizard, plus one for playing Random: P.rk[wizard id or 'random'] = {elo, best, g}.
+   (Older saves had a single rating: it goes to the Wizard that was selected.) */
+function normProf(j) {
+  const q = Object.assign(clone(DEF), j); q.opt = Object.assign(clone(DEF.opt), j.opt);
+  if (!j.rk) { q.rk = {}; if (j.rankGames) q.rk[q.opt.wiz] = {elo: j.elo, best: j.bestElo || j.elo, g: j.rankGames}; }
+  delete q.elo; delete q.bestElo; delete q.rankGames;
+  return q;
+}
+let optSig = '';
+function loadProf() { try { const j = JSON.parse(store.get('db_profile') || 'null'); if (j) P = normProf(j); } catch (e) {} optSig = JSON.stringify(P.opt); }
+/* mt: when the profile last changed; omt: when the options last changed (account sync uses both to settle conflicts). */
+function saveProf() {
+  P.mt = Date.now(); const sig = JSON.stringify(P.opt); if (sig !== optSig) { P.omt = P.mt; optSig = sig; }
+  store.set('db_profile', JSON.stringify(P)); try { SYNC.dirty(); } catch (e) {}
+}
+const rkKey = () => P.opt.rwiz || P.opt.wiz;                                   // what you play in Ranked: a Wizard, or 'random'
+const rkOf = k => P.rk[k] || {elo: 1000, best: 1000, g: 0};
+const rkName = k => k === 'random' ? 'Random' : WIZ[k].s;
+const rkTop = () => Object.keys(P.rk).sort((a, b) => P.rk[b].elo - P.rk[a].elo)[0];
 
 /* ---------- sound ---------- */
 let AC = null;
@@ -490,7 +518,7 @@ function drama(done) {
     end(3900);
   } else {
     T(650, () => {
-      const fly = $('#dragon .dfly'), a = fly.querySelector('.dface').getBoundingClientRect(), v = tokOf(l).getBoundingClientRect();
+      const fly = $('#dragon .dface'), a = fly.getBoundingClientRect(), v = tokOf(l).getBoundingClientRect();   // only the Dragon jumps: its Power card stays put
       $('#dragon').style.zIndex = 6;
       if (fly.animate) fly.animate(arcFrames(0, 0, v.left + v.width / 2 - a.left - a.width / 2, v.top + v.height / 2 - a.top - a.height / 2, $('#bridge').offsetHeight * 0.8, 1.3), {duration: 750 * sp, easing: 'linear', fill: 'forwards'});
     });
@@ -560,10 +588,11 @@ function finish() {
       const n = Object.values(P.wz).filter(x => x.w > 0).length; if (n >= 5) grant('five', got); if (n >= 15) grant('all', got);
     }
     if (cfg.mode === 'ranked') {
-      const exp = 1 / (1 + 10 ** ((cfg.oppElo - P.elo) / 400)), d = Math.round(32 * ((won ? 1 : 0) - exp)), r0 = rankOf(P.elo);
-      P.elo += d; P.bestElo = Math.max(P.bestElo, P.elo); P.rankGames++;
-      const r1 = rankOf(P.elo); if (r1 >= 5) grant('rank5', got); if (r1 >= 10) grant('rank10', got);
-      extra = `<p>Elo ${d >= 0 ? '+' : ''}${d} → <b>${P.elo}</b> · Rank ${r1}${r1 > r0 ? ' (promoted!)' : r1 < r0 ? ' (demoted)' : ''}</p>`;
+      const key = cfg.rk || cfg.wiz[0], R = P.rk[key] = P.rk[key] || {elo: 1000, best: 1000, g: 0};
+      const exp = 1 / (1 + 10 ** ((cfg.oppElo - R.elo) / 400)), d = Math.round(32 * ((won ? 1 : 0) - exp)), r0 = rankOf(R.elo);
+      R.elo += d; R.best = Math.max(R.best, R.elo); R.g++;
+      const r1 = rankOf(R.elo); if (r1 >= 5) grant('rank5', got); if (r1 >= 10) grant('rank10', got);
+      extra = `<p>${esc(rkName(key))}: Elo ${d >= 0 ? '+' : ''}${d} → <b>${R.elo}</b> · Rank ${r1}${r1 > r0 ? ' (promoted!)' : r1 < r0 ? ' (demoted)' : ''}</p>`;
       acts = '<button class="btn pri" data-a="rankgo" autofocus>Find next match</button>';
     }
     if (cfg.mode === 'daily') { if (!P.daily[cfg.day]) P.daily[cfg.day] = won ? 'W' : 'L'; const s = dailyStreak(); if (s >= 3) grant('daily3', got); extra = `<p>Today’s result is recorded: <b>${P.daily[cfg.day] === 'W' ? 'Won' : 'Lost'}</b>. Streak: ${s}.</p>`; acts = '<button class="btn" data-a="again">Replay for fun</button>'; }
@@ -608,7 +637,7 @@ function launch() {
   if (mode === 'daily') { const d = dailyToday(); return startMatch({mode, wiz: d.wiz, level: d.level, seed: d.seed, first: d.first, day: d.day}); }
 }
 function tourGo() { const T = P.tour, lv = T.level, up = {easy: 'normal', normal: 'hard', hard: 'expert', expert: 'expert'}; startMatch({mode: 'tour', wiz: [T.wiz, tourOpp(T)], level: T.round === 2 ? up[lv] : lv, ed: T.ed === 1 ? 1 : 2}); }
-function rankGo() { const r = rankOf(P.elo), oppElo = Math.max(700, P.elo + Math.round((Math.random() - .5) * 160)), ro = rankOf(oppElo); startMatch({mode: 'ranked', ed: P.opt.ed2 ? 2 : 1, wiz: [P.opt.wiz, randWiz(P.opt.wiz)], level: levelForRank(ro), oppElo, oppName: BOTS[Math.floor(Math.random() * BOTS.length)] + ' (' + oppElo + ')'}); }
+function rankGo() { const key = rkKey(), me = key === 'random' ? randWiz() : key, elo = rkOf(key).elo, oppElo = Math.max(700, elo + Math.round((Math.random() - .5) * 160)), ro = rankOf(oppElo); startMatch({mode: 'ranked', rk: key, ed: P.opt.ed2 ? 2 : 1, wiz: [me, randWiz(me)], level: levelForRank(ro), oppElo, oppName: BOTS[Math.floor(Math.random() * BOTS.length)] + ' (' + oppElo + ')'}); }
 /* What a puzzle asks for: one short line. Turns are your own turns. */
 function puzzleGoal(z) {
   const n = z.goal.n, t = n === 1 ? '1 turn' : n + ' turns';
@@ -621,7 +650,8 @@ function drawSetup() {
   const modes = [['versus', 'Versus'], ['tour', 'Tournament'], ['ranked', 'Ranked'], ['daily', 'Daily Challenge'], ['puzzle', 'Puzzles']];
   let h = `<div class="row"><button class="btn sm" data-a="totitle">← Title</button><h2>Play</h2></div>
     <div class="row"><b>Mode</b><span class="seg">${modes.map(([m, l]) => `<button class="btn sm" data-a="setmode" data-v="${m}" aria-pressed="${m === mode}">${l}</button>`).join('')}</span></div>`;
-  const pickRow = (cur, act, withRandom, not) => `<div class="picks">${withRandom ? `<button class="pick" data-a="${act}" data-v="random" aria-pressed="${cur === 'random'}"><img src="${im('logo')}" alt=""><div><b>Random</b><span>any other Wizard</span></div></button>` : ''}${WIZ_IDS.filter(w => w !== not).map(w => `<button class="pick" data-a="${act}" data-v="${w}" aria-pressed="${cur === w}"><img src="${face(w)}" alt=""><div><b>${esc(WIZ[w].s)}</b><span>${esc(WIZ[w].title)}</span></div></button>`).join('')}</div>`;
+  // sub(id): the small second line of a pick (by default the Wizard's title)
+  const pickRow = (cur, act, withRandom, not, sub = w => w === 'random' ? 'any other Wizard' : WIZ[w].title) => `<div class="picks">${withRandom ? `<button class="pick" data-a="${act}" data-v="random" aria-pressed="${cur === 'random'}"><img src="${im('logo')}" alt=""><div><b>Random</b><span>${esc(sub('random'))}</span></div></button>` : ''}${WIZ_IDS.filter(w => w !== not).map(w => `<button class="pick" data-a="${act}" data-v="${w}" aria-pressed="${cur === w}"><img src="${face(w)}" alt=""><div><b>${esc(WIZ[w].s)}</b><span>${esc(sub(w))}</span></div></button>`).join('')}</div>`;
   const edBox = `<label class="row" style="gap:6px"><input type="checkbox" id="opt-ed2" data-t="ed2" ${o.ed2 ? 'checked' : ''}> <b>2nd Edition rules</b> <span class="lbl">the updated cards; untick for the printed 1st Edition</span></label>`;
   const levels = `<div class="row"><b>CPU</b><span class="seg">${Object.keys(LEVEL_NAMES).map(l => `<button class="btn sm" data-a="setlevel" data-v="${l}" aria-pressed="${o.level === l}">${LEVEL_NAMES[l]}</button>`).join('')}</span></div>`;
   const wizInfo = w => `<div class="info"><b>${esc(WIZ[w].n)}</b> <span class="lbl">${esc(WIZ[w].title)}</span> <button class="btn sm" data-a="zoomwiz" data-id="${w}">See card</button><ul>${wizLines(w, curEd()).map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
@@ -633,9 +663,10 @@ function drawSetup() {
     h += T ? `<div class="info"><b>Tournament in progress</b> · ${['Quarterfinal', 'Semifinal', 'Final'][T.round]} vs ${esc(WIZ[tourOpp(T)].n)}</div>${bracketHtml(T)}<div class="row"><button class="btn pri" data-a="tourgo">Play ${['Quarterfinal', 'Semifinal', 'Final'][T.round]}</button><button class="btn" data-a="tourquit">Abandon Tournament</button></div>`
       : `<p class="lbl" style="margin:0">Eight Wizards, single elimination. Win three matches to take the trophy. The Final is one difficulty level harder.</p><div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Start Tournament</button>${levels}${edBox}</div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
   } else if (mode === 'ranked') {
-    const r = rankOf(P.elo);
-    h += `<div class="info"><b>Rank ${r}</b> of 10 · Elo ${P.elo} <span class="lbl">(best ${P.bestElo}, ${P.rankGames} games)</span><br><span class="lbl">Opponents are picked near your rating; higher ranks play stronger CPUs. Every 100 Elo is a rank.</span></div>
-      <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Find a match</button>${edBox}</div><h3>Your Wizard</h3>${pickRow(o.wiz, 'setwiz')}${wizInfo(o.wiz)}`;
+    const key = rkKey(), R = rkOf(key);
+    const sub = k => P.rk[k] ? `Elo ${P.rk[k].elo} · Rank ${rankOf(P.rk[k].elo)}` : k === 'random' ? 'a different Wizard every match' : WIZ[k].title;
+    h += `<div class="info" id="rkinfo"><b>${esc(key === 'random' ? 'Random' : WIZ[key].n)}: Rank ${rankOf(R.elo)}</b> of 10 · Elo ${R.elo} <span class="lbl">(best ${R.best}, ${R.g} ${R.g === 1 ? 'game' : 'games'})</span><br><span class="lbl">Each Wizard has its own rating, and so does Random. Opponents are picked near that rating; higher ranks play stronger CPUs. Every 100 Elo is a rank.</span></div>
+      <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">Find a match</button>${edBox}</div><h3>Your Wizard</h3>${pickRow(key, 'setrwiz', true, null, sub)}${key === 'random' ? '' : wizInfo(key)}`;
   } else if (mode === 'daily') {
     const d = dailyToday(), rec = P.daily[d.day];
     h += `<div class="info"><b>${d.day}</b> · You are <b>${esc(WIZ[d.wiz[0]].n)}</b> against <b>${esc(WIZ[d.wiz[1]].n)}</b> (${LEVEL_NAMES[d.level]} CPU). Everyone gets the same Wizards and the same shuffle today, with 2nd Edition rules.<br>${rec ? `Today: <b>${rec === 'W' ? 'Won' : 'Lost'}</b>.` : 'Not played yet.'} Streak: ${dailyStreak()}.</div>
@@ -664,10 +695,12 @@ function statsSheet() {
   const rows = [], tot = {w: 0, l: 0};
   for (const [k, v] of Object.entries(P.st)) { const [m, l] = k.split(':'); rows.push(`<tr><td>${{versus: 'Versus', tour: 'Tournament', ranked: 'Ranked', daily: 'Daily Challenge'}[m] || m}${l ? ' · ' + LEVEL_NAMES[l] : ''}</td><td>${v.w}</td><td>${v.l}</td></tr>`); tot.w += v.w; tot.l += v.l; }
   const wz = WIZ_IDS.filter(w => P.wz[w]).map(w => `<tr><td>${esc(WIZ[w].n)}</td><td>${P.wz[w].w}</td><td>${P.wz[w].l}</td></tr>`).join('');
-  const na = ACH.filter(a => P.ach[a[0]]).length;
-  openOv(`<h2>Stats</h2><div class="info">Matches: <b>${tot.w + tot.l}</b> · Wins: <b>${tot.w}</b> · Ranked: <b>Rank ${rankOf(P.elo)}</b> (Elo ${P.elo}) · Trophies: <b>${P.trophies}</b> · Daily streak: <b>${dailyStreak()}</b> · Puzzles: <b>${PUZZLES.filter(z => P.pz2[z.id]).length}/${PUZZLES.length}</b></div>
+  const na = ACH.filter(a => P.ach[a[0]]).length, top = rkTop();
+  const rk = Object.keys(P.rk).sort((a, b) => P.rk[b].elo - P.rk[a].elo).map(k => `<tr><td>${esc(k === 'random' ? 'Random' : WIZ[k].n)}</td><td>${rankOf(P.rk[k].elo)}</td><td>${P.rk[k].elo}</td><td>${P.rk[k].best}</td><td>${P.rk[k].g}</td></tr>`).join('');
+  openOv(`<h2>Stats</h2><div class="info">Matches: <b>${tot.w + tot.l}</b> · Wins: <b>${tot.w}</b> · Ranked: ${top ? `<b>Rank ${rankOf(P.rk[top].elo)}</b> (Elo ${P.rk[top].elo}, ${esc(rkName(top))})` : '<b>not played</b>'} · Trophies: <b>${P.trophies}</b> · Daily streak: <b>${dailyStreak()}</b> · Puzzles: <b>${PUZZLES.filter(z => P.pz2[z.id]).length}/${PUZZLES.length}</b></div>
     ${rows.length ? `<table class="st"><tr><th>Mode</th><th>Won</th><th>Lost</th></tr>${rows.join('')}</table>` : '<p class="lbl">No matches played yet.</p>'}
     ${wz ? `<table class="st"><tr><th>Wizard</th><th>Won</th><th>Lost</th></tr>${wz}</table>` : ''}
+    ${rk ? `<table class="st"><tr><th>Ranked as</th><th>Rank</th><th>Elo</th><th>Best</th><th>Games</th></tr>${rk}</table>` : ''}
     <h3>Achievements ${na}/${ACH.length}</h3>${ACH.map(a => `<div class="ach ${P.ach[a[0]] ? '' : 'off'}"><i>${a[1]}</i><div><b>${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}
     <div class="acts"><button class="btn" data-a="close">Close</button></div>`);
 }
@@ -679,6 +712,7 @@ function optionsSheet() {
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-mview" data-t="mview" ${o.mview ? 'checked' : ''}> <b>Mobile View</b> <span class="lbl">play in a phone-shaped portrait layout</span></label>
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-sound" data-t="sound" ${o.sound ? 'checked' : ''}> <b>Sound</b></label>
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-onetap" data-t="oneTap" ${o.oneTap ? 'checked' : ''}> <b>One-tap cards</b> <span class="lbl">play a card without the enlarged preview first</span></label>
+    ${SYNC.box()}${UPD.box()}
     <div class="row"><button class="btn sm" data-a="wipe1">Erase all progress…</button></div>
     <div class="acts"><button class="btn pri" data-a="close">Done</button></div>`);
 }
@@ -691,7 +725,7 @@ function menuSheet() {
   openOv(`<h2>Menu</h2><div class="tmenu" style="margin:0 auto"><button class="tbtn pri" data-a="close">Back to the match</button><button class="tbtn" data-a="zoomimg" data-id="ref" data-n="Turn reference">Turn reference card</button><button class="tbtn" data-a="rulebook">Rulebook</button><button class="tbtn" data-a="library">Card Library</button><button class="tbtn" data-a="options">Options</button>
     ${M.cfg.puzzle ? '<button class="tbtn" data-a="again">Restart puzzle</button><button class="tbtn" data-a="totitle">Quit to title</button>' : '<button class="tbtn" data-a="totitle">Save &amp; quit to title</button><button class="tbtn" data-a="resign">Resign</button>'}</div>`);
 }
-function toTitle() { M = null; closeOv(); $('#contbtn').hidden = !store.get('db_save'); $('#playbtn').classList.toggle('pri', !store.get('db_save')); show('title'); }
+function toTitle() { try { UPD.titleCheck(); } catch (e) {} M = null; closeOv(); $('#contbtn').hidden = !store.get('db_save'); $('#playbtn').classList.toggle('pri', !store.get('db_save')); show('title'); }
 
 /* ---------- input ---------- */
 document.addEventListener('click', ev => {
@@ -723,6 +757,7 @@ document.addEventListener('click', ev => {
     case 'totitle': toTitle(); break;
     case 'setmode': P.opt.mode = v; saveProf(); drawSetup(); break;
     case 'setwiz': P.opt.wiz = v; if (P.opt.opp === v) P.opt.opp = 'random'; saveProf(); drawSetup(); break;   // no mirror matches
+    case 'setrwiz': P.opt.rwiz = v; saveProf(); drawSetup(); break;
     case 'setopp': P.opt.opp = v === P.opt.wiz ? 'random' : v; saveProf(); drawSetup(); break;
     case 'setlevel': P.opt.level = v; saveProf(); drawSetup(); break;
     case 'setspeed': P.opt.speed = +v; saveProf(); optionsSheet(); break;
@@ -743,12 +778,273 @@ document.addEventListener('click', ev => {
     case 'coachok': $('#coach').hidden = true; break;
     case 'resign': openOv('<h2>Resign this match?</h2><p>It counts as a loss.</p><div class="acts"><button class="btn" data-a="resign2">Resign</button><button class="btn pri" data-a="close" autofocus>Keep playing</button></div>'); break;
     case 'resign2': M.G.S.winner = 1; M.G.S.reason = 'resign'; M.G.req = null; closeOv(); render(); finish(); break;
-    case 'wipe1': openOv('<h2>Erase all progress?</h2><p>This permanently erases your stats, achievements, rank, trophies and any match in progress in this browser.</p><div class="acts"><button class="btn" data-a="wipe2">Erase everything</button><button class="btn pri" data-a="close" autofocus>Cancel</button></div>'); break;
-    case 'wipe2': store.del('db_profile'); store.del('db_save'); P = clone(DEF); applyView(); toTitle(); break;
+    case 'wipe1': openOv(`<h2>Erase all progress?</h2><p>This permanently erases your stats, achievements, ranks, trophies and any match in progress ${SYNC.S.on && SYNC.S.ses ? 'on this device and in your account' : 'in this browser'}.</p><div class="acts"><button class="btn" data-a="wipe2">Erase everything</button><button class="btn pri" data-a="close" autofocus>Cancel</button></div>`); break;
+    case 'wipe2': store.del('db_profile'); store.del('db_save'); P = clone(DEF); optSig = JSON.stringify(P.opt); applyView(); SYNC.wipe(); toTitle(); break;
+    case 'acct': acctSheet(); break;
+    case 'acctgo': case 'acctnew': acctSubmit(a === 'acctnew'); break;
+    case 'acctforgot': acctForgot(); break;
+    case 'newpw': acctNewPw(); break;
+    case 'syncnow': SYNC.run().then(() => toast(SYNC.S.err || 'Your progress is synced.')); break;
+    case 'acctout': openOv('<h2>Sign out?</h2><p>Your progress stays safe in your account. This device goes back to a fresh guest profile, and signing in again brings everything back.</p><div class="acts"><button class="btn" data-a="acctout2">Sign out</button><button class="btn pri" data-a="options" autofocus>Stay signed in</button></div>'); break;
+    case 'acctout2': acctBusy(true); SYNC.signOut().then(() => { optionsSheet(); toast('Signed out.'); }); break;
+    case 'updchk': UPD.check(false); break;
+    case 'updgo': if (!$('#sheet #updbox')) optionsSheet(); UPD.go(); break;
   }
 });
 document.addEventListener('change', ev => { const t = ev.target.dataset && ev.target.dataset.t; if (!t) return; P.opt[t] = ev.target.checked; saveProf(); if (t === 'mview') applyView(); if (t === 'ed2' && !M) { if (!$('#setup').hidden) drawSetup(); if ($('#ov').classList.contains('show')) optionsSheet(); } });
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#ov').classList.contains('show')) closeOv(); else if (M && !M.G.over) menuSheet(); } });
+
+/* ---------- account + cross-device sync (Supabase), the same way Spellstorm does it ----------
+   Signing in is optional. The profile (stats, Ranked ratings, achievements, trophies, puzzles, Dailies, a Tournament in
+   progress) and most options sync to one private row per account. If two devices both changed things, a three-way merge
+   against the last synced copy keeps what each of them earned. Only the full builds turn this on (window.DB_SYNC, set by
+   build.py); the version embedded on claude.ai cannot reach the service.
+   The account is the same one Spellstorm uses (same Supabase project); Dragon Bridge keeps its own table. */
+const SUPA = Object.assign({url: 'https://bdncsprakdvvmfnxxlqr.supabase.co', key: 'sb_publishable_y_mJp1WbutYXVPPKbrl1lQ_4vpZ5GqN', table: 'dragonbridge_saves'}, window.DB_SUPA_CFG || {});
+const OPT_LOCAL = ['mview', 'sound'];   // these stay per device
+const SYNC = (() => {
+  const AKEY = 'db_auth', YKEY = 'db_sync';
+  const S = {on: !!window.DB_SYNC, ses: null, state: 'idle', last: 0, err: '', timer: null, chain: Promise.resolve()};
+  try { S.ses = JSON.parse(store.get(AKEY) || 'null'); } catch (e) {}
+  const meta = () => { try { return JSON.parse(store.get(YKEY) || 'null') || {}; } catch (e) { return {}; } };
+  const setMeta = m => store.set(YKEY, JSON.stringify(m));
+  const keep = s => { S.ses = s; if (s) store.set(AKEY, JSON.stringify(s)); else store.del(AKEY); };
+  // ---- HTTP ----
+  async function call(path, o = {}) {
+    const h = {apikey: SUPA.key, 'Content-Type': 'application/json'}; if (o.tok) h.Authorization = 'Bearer ' + o.tok; if (o.prefer) h.Prefer = o.prefer;
+    const ac = typeof AbortController !== 'undefined' ? new AbortController() : null, to = setTimeout(() => ac && ac.abort(), 15000); let r;
+    try { r = await fetch(SUPA.url + path, {method: o.method || 'GET', headers: h, body: o.body === undefined ? undefined : JSON.stringify(o.body), signal: ac && ac.signal}); }
+    catch (e) { throw {status: 0, msg: 'Couldn’t reach the sync service. Check your internet connection.'}; } finally { clearTimeout(to); }
+    let j = null; try { const tx = await r.text(); j = tx ? JSON.parse(tx) : null; } catch (e) {}
+    if (!r.ok) throw {status: r.status, code: j && (j.error_code || j.code), msg: j && (j.msg || j.error_description || j.message || j.error) || ('Error ' + r.status)};
+    return j;
+  }
+  const friendly = e => ({invalid_credentials: 'Wrong email or password.', user_already_exists: 'An account with that email already exists. Try signing in.', weak_password: 'Passwords need at least 6 characters.',
+    email_address_invalid: 'That email address doesn’t look right.', validation_failed: /email/i.test(e.msg || '') ? 'That email address doesn’t look right.' : (e.msg || 'Please check what you entered.'),
+    email_not_confirmed: 'Please confirm your email address first (check your inbox), then sign in.', over_email_send_rate_limit: 'Too many emails sent. Please wait a few minutes and try again.',
+    over_request_rate_limit: 'Too many attempts. Please wait a minute and try again.', signup_disabled: 'New accounts are turned off at the moment.'})[e.code] || e.msg || 'Something went wrong. Please try again.';
+  const sesFrom = j => ({at: j.access_token, rt: j.refresh_token, exp: (j.expires_at ? j.expires_at * 1000 : Date.now() + (j.expires_in || 3600) * 1000), uid: j.user && j.user.id, email: j.user && j.user.email});
+  async function token(force) {
+    if (!S.ses) throw {status: 401, msg: 'Not signed in.'};
+    if (force || Date.now() > S.ses.exp - 60000) {
+      try { const j = await call('/auth/v1/token?grant_type=refresh_token', {method: 'POST', body: {refresh_token: S.ses.rt}}); keep(Object.assign(sesFrom(j), {email: (j.user && j.user.email) || S.ses.email})); }
+      catch (e) { if (e.status && e.status < 500 && e.status !== 429) { keep(null); S.state = 'out'; render(); throw {status: 401, msg: 'Your sign-in expired. Please sign in again.'}; } throw e; }
+    }
+    return S.ses.at;
+  }
+  async function rest(path, o = {}) {
+    try { return await call(path, Object.assign({}, o, {tok: await token()})); }
+    catch (e) { if (e.status === 401 && S.ses) return await call(path, Object.assign({}, o, {tok: await token(true)})); throw e; }
+  }
+  // ---- what is stored ----
+  const blank = () => { const b = clone(DEF); delete b.opt; return b; };
+  const forCloud = p => { const c = clone(p); delete c.opt; delete c.omt; return c; };
+  const optCloud = () => { const o = {}; for (const k in P.opt) if (!OPT_LOCAL.includes(k)) o[k] = P.opt[k]; o._mt = P.omt || 0; return o; };
+  const isBlank = p => !(Object.keys(p.st || {}).length || Object.keys(p.ach || {}).length || Object.keys(p.rk || {}).length || Object.keys(p.pz2 || {}).length || Object.keys(p.daily || {}).length || p.trophies || p.tour || p.tutDone);
+  // ---- three-way merge: b = the last synced copy, l = this device, c = the account ----
+  const stab = v => v === undefined ? 'u' : JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, kk) => (o[kk] = x[kk], o), {}) : x);
+  const same = (a, b) => stab(a) === stab(b);
+  const MAXK = new Set(['best', 'mt']), ATOM = new Set(['tour']), COUNT = new Set(['w', 'l', 'g', 'trophies']);
+  const plain = x => x && typeof x === 'object' && !Array.isArray(x);
+  function merge(b, l, c, newerLocal, key, parent) {
+    if (plain(l) && plain(c) && !ATOM.has(key)) {
+      const o = {}, bb = plain(b) ? b : {};
+      for (const k of new Set([...Object.keys(l), ...Object.keys(c)])) { const v = merge(bb[k], l[k], c[k], newerLocal, k, key); if (v !== undefined) o[k] = v; }
+      return o;
+    }
+    if (typeof l === 'number' && typeof c === 'number' && COUNT.has(key)) {         // counters (wins, losses, games, trophies): both devices' additions count
+      const bn = typeof b === 'number' ? b : 0; return l >= bn && c >= bn ? bn + (l - bn) + (c - bn) : newerLocal ? l : c;
+    }
+    if (same(l, c)) return l; if (same(l, b)) return c; if (same(c, b)) return l;   // only one side changed it
+    if (l === undefined) return c; if (c === undefined) return l;
+    if (ATOM.has(key)) return newerLocal ? l : c;                                  // a Tournament in progress is kept whole
+    if (typeof l === 'number' && typeof c === 'number') {
+      if (MAXK.has(key) || parent === 'pz2') return Math.max(l, c);
+      return newerLocal ? l : c;                                                   // a rating, a setting: the more recent one
+    }
+    if (typeof l === 'string' && typeof c === 'string' && parent === 'ach') return l < c ? l : c;   // achievement: the earliest date
+    if (typeof l === 'boolean' && typeof c === 'boolean' && key === 'tutDone') return l || c;
+    return newerLocal ? l : c;
+  }
+  const mergeDoc = (b, l, c) => ({p: merge(b.p, l.p, c.p, (l.p.mt || 0) >= (c.p.mt || 0), '', ''), o: merge(b.o, l.o, c.o, (l.o && l.o._mt || 0) >= (c.o && c.o._mt || 0), '', '')});
+  // ---- put a synced copy onto this device ----
+  function applyLocal(doc) {
+    const o = doc.o || {}, np = normProf(Object.assign(clone(doc.p), {opt: P.opt}));
+    for (const k in o) if (k !== '_mt' && !OPT_LOCAL.includes(k)) np.opt[k] = o[k];
+    if (np.opt.opp === np.opt.wiz) np.opt.opp = 'random';
+    np.omt = o._mt || P.omt || 0; P = np; optSig = JSON.stringify(P.opt); store.set('db_profile', JSON.stringify(P));
+    try { if (!M && !$('#setup').hidden) drawSetup(); } catch (e) {}
+  }
+  // ---- one sync pass ----
+  async function pass() {
+    if (!S.ses) return; const uid = S.ses.uid, q = `/rest/v1/${SUPA.table}?select=data,updated_at&user_id=eq.${uid}`;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const snapP = forCloud(P), local = {p: snapP, o: optCloud()}, m = meta(), base = m.uid === uid && m.base ? m.base : null;
+      const rows = await rest(q); let doc, conflict = false;
+      if (!rows.length) {
+        doc = local;
+        try { await rest('/rest/v1/' + SUPA.table, {method: 'POST', prefer: 'return=representation', body: {user_id: uid, data: doc, updated_at: new Date().toISOString()}}); } catch (e) { if (e.status === 409) continue; throw e; }
+      } else {
+        const cloud = rows[0].data || {p: blank(), o: {}}; cloud.p = Object.assign(blank(), cloud.p || {}); cloud.o = cloud.o || {};
+        if (!base && isBlank(snapP)) doc = cloud;
+        else { doc = mergeDoc(base || {p: blank(), o: {}}, local, cloud); if (!base && !isBlank(cloud.p)) S.combined = true; }
+        if (!same(doc, cloud)) {
+          const r = await rest(`/rest/v1/${SUPA.table}?user_id=eq.${uid}&updated_at=eq.${encodeURIComponent(rows[0].updated_at)}`, {method: 'PATCH', prefer: 'return=representation', body: {data: doc, updated_at: new Date().toISOString()}});
+          if (!r || !r.length) conflict = true;
+        }
+      }
+      if (conflict) continue;                                                       // another device saved in between: merge again
+      const now = forCloud(P);
+      if (same(now, snapP)) { if (!same(doc, local)) applyLocal(doc); }
+      else { applyLocal({p: merge(snapP, now, doc.p, true, '', ''), o: doc.o}); S.again = true; }   // keep what happened during the sync
+      setMeta({uid, base: doc}); S.last = Date.now(); S.err = ''; return;
+    }
+    throw {msg: 'Couldn’t save your progress because another device kept changing it. It will retry.'};
+  }
+  const notReady = e => e && (e.status === 404 || e.code === 'PGRST205' || e.code === '42P01');
+  function status() { if (!S.ses) return ''; if (S.state === 'busy') return 'Syncing…'; if (S.err) return S.err; if (!S.last) return 'Not synced yet'; const s = Math.round((Date.now() - S.last) / 1000); return s < 60 ? 'Synced just now' : s < 3600 ? `Synced ${Math.round(s / 60)} min ago` : 'Synced ' + new Date(S.last).toLocaleString(); }
+  function render() { const el = document.getElementById('acctst'); if (el) el.textContent = status(); const b = document.getElementById('acctbox'); if (b && b.dataset.st !== S.state + (S.ses ? 1 : 0)) b.outerHTML = box(); }
+  function run() {
+    if (!S.on || !S.ses) return S.chain;
+    S.chain = S.chain.then(async () => {
+      S.state = 'busy'; S.again = false; render();
+      try { await pass(); if (S.combined) { S.combined = false; S.wasCombined = true; toast('This device’s progress was combined with your account.'); } }
+      catch (e) { S.err = notReady(e) ? 'Account sync isn’t switched on for Dragon Bridge yet. Your progress is safe on this device.' : (e.msg || 'Sync failed. It will retry.'); }
+      S.state = 'idle'; render(); if (S.again) dirty();
+    }).catch(() => {});
+    return S.chain;
+  }
+  function dirty() { if (!S.on || !S.ses) return; clearTimeout(S.timer); S.timer = setTimeout(run, 2500); }
+  function box() {
+    if (!S.on) return '';
+    return S.ses ? `<div class="info" id="acctbox" data-st="${S.state}1"><b>Account</b> · Signed in as <b>${esc(S.ses.email || '')}</b><br><span id="acctst" class="lbl">${esc(status())}</span><div class="row" style="margin-top:6px"><button class="btn sm" data-a="syncnow">Sync now</button><button class="btn sm" data-a="acctout">Sign out</button></div></div>`
+      : `<div class="info" id="acctbox" data-st="${S.state}0"><b>Account</b> <span class="lbl">Sign in to keep your progress in sync on all your devices.</span><div class="row" style="margin-top:6px"><button class="btn sm" data-a="acct">Sign in or create an account</button></div></div>`;
+  }
+  async function signIn(email, pw, create) {
+    const j = await call(create ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password', {method: 'POST', body: {email: email.trim(), password: pw}}).catch(e => { throw {msg: friendly(e)}; });
+    if (!j || !j.access_token) { if (create) throw {msg: 'Account created. Check your email to confirm it, then sign in.', ok: 1}; throw {msg: 'Couldn’t sign in. Please try again.'}; }
+    keep(sesFrom(j)); S.err = ''; S.last = 0; await run(); return S.ses;
+  }
+  /* Signing out: progress stays in the account; this device goes back to a fresh guest profile. */
+  async function signOut() {
+    await run(); try { await call('/auth/v1/logout', {method: 'POST', tok: S.ses && S.ses.at}); } catch (e) {}
+    keep(null); setMeta({}); const o = P.opt; P = clone(DEF); P.opt = o; optSig = JSON.stringify(o); store.set('db_profile', JSON.stringify(P)); S.last = 0; S.err = ''; S.state = 'idle';
+  }
+  /* "Erase all progress" while signed in also empties the account's copy (otherwise the next sync would bring it all back). */
+  async function wipe() {
+    if (!S.on || !S.ses) return; clearTimeout(S.timer);
+    S.chain = S.chain.then(async () => {
+      const doc = {p: forCloud(P), o: optCloud()};
+      try { await rest(`/rest/v1/${SUPA.table}?user_id=eq.${S.ses.uid}`, {method: 'PATCH', prefer: 'return=representation', body: {data: doc, updated_at: new Date().toISOString()}}); setMeta({uid: S.ses.uid, base: doc}); S.last = Date.now(); S.err = ''; }
+      catch (e) { S.err = e.msg || 'Sync failed. It will retry.'; }
+      render();
+    }).catch(() => {});
+    return S.chain;
+  }
+  async function recoverMail(email) { await call('/auth/v1/recover', {method: 'POST', body: {email: email.trim()}}).catch(e => { throw {msg: friendly(e)}; }); }
+  async function setPassword(pw) { await rest('/auth/v1/user', {method: 'PUT', body: {password: pw}}).catch(e => { throw {msg: friendly(e)}; }); }
+  return {S, run, dirty, box, render, status, signIn, signOut, wipe, recoverMail, setPassword, keep, sesFrom, merge, mergeDoc};
+})();
+let toastT = 0;
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 3800); }
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+function acctSheet(msg, ok) {
+  openOv(`<h2>Your account</h2><p class="lbl" style="margin:0">Sign in on each device to keep your stats, Ranked ratings, achievements, puzzles and settings in sync. It is the same account as in Spellstorm, so if you have one there, sign in with it here.</p>
+    <div class="acctform"><label>Email<input id="acem" type="email" autocomplete="email" inputmode="email" value="${esc(acctSheet.em || '')}"></label><label>Password<input id="acpw" type="password" autocomplete="current-password" minlength="6"></label>
+    ${msg ? `<p class="${ok ? 'acok' : 'acerr'}" role="alert">${esc(msg)}</p>` : ''}</div>
+    <div class="acts"><button class="btn pri" data-a="acctgo">Sign in</button><button class="btn" data-a="acctnew">Create account</button></div>
+    <p class="lbl" style="text-align:center;margin:0"><button class="qlink" data-a="acctforgot">Forgot your password?</button> · <button class="qlink" data-a="options">Back</button></p>`);
+  setTimeout(() => { const e = document.getElementById(acctSheet.em ? 'acpw' : 'acem'); if (e) e.focus(); }, 50);
+}
+const acctBusy = on => document.querySelectorAll('#sheet .acts .btn').forEach(x => x.disabled = on);
+function acctSubmit(create) {
+  const em = ($('#acem') || {}).value || '', pw = ($('#acpw') || {}).value || ''; acctSheet.em = em;
+  if (!EMAIL_RE.test(em.trim())) return acctSheet('Please enter your email address.'); if (pw.length < 6) return acctSheet('Passwords need at least 6 characters.');
+  acctBusy(true);
+  SYNC.signIn(em, pw, create).then(() => { optionsSheet(); const c = SYNC.S.wasCombined; SYNC.S.wasCombined = false; if (!SYNC.S.err) toast(c ? 'Signed in. This device’s progress was combined with your account.' : create ? 'Account created. Your progress now syncs.' : 'Signed in. Your progress now syncs.'); }).catch(e => acctSheet(e.msg, e.ok));
+}
+function acctForgot() {
+  const em = (($('#acem') || {}).value || acctSheet.em || '').trim(); acctSheet.em = em;
+  if (!EMAIL_RE.test(em)) return acctSheet('Enter your email address above, then tap “Forgot your password?” again.');
+  acctBusy(true); SYNC.recoverMail(em).then(() => acctSheet('If that email has an account, a password-reset link is on its way.', 1)).catch(e => acctSheet(e.msg));
+}
+/* A password-reset link can open the game with a one-time sign-in in the address: ask for a new password. */
+function acctRecovery() {
+  const h = location.hash || ''; if (!/type=recovery/.test(h) || !/access_token=/.test(h)) return; const q = new URLSearchParams(h.slice(1));
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  SYNC.keep(SYNC.sesFrom({access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_in: +q.get('expires_in') || 3600, user: {id: JSON.parse(atob(q.get('access_token').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub, email: ''}}));
+  openOv(`<h2>Choose a new password</h2><div class="acctform"><label>New password<input id="acpw" type="password" autocomplete="new-password" minlength="6"></label></div><div class="acts"><button class="btn pri" data-a="newpw">Save password</button></div>`);
+}
+function acctNewPw() {
+  const pw = ($('#acpw') || {}).value || ''; if (pw.length < 6) { toast('Passwords need at least 6 characters.'); return; }
+  SYNC.setPassword(pw).then(() => { closeOv(); toast('Password changed. You’re signed in.'); SYNC.run(); }).catch(e => toast(e.msg));
+}
+
+/* ---------- in-app updates: the Android app and the Windows .exe (the browser versions are always current) ----------
+   The game asks GitHub for the latest release; if it is newer, the title screen shows "Update Available!". The Android
+   app downloads the new APK and opens Android's installer (branding/java/UpdaterPlugin.java); the Windows .exe replaces
+   itself and restarts (desktop/main.js). */
+const UPD = (() => {
+  const API = 'https://api.github.com/repos/keithburgun/dragonbridge/releases/latest', CKEY = 'db_updchk';
+  const S = {kind: null, cur: '', latest: '', asset: null, state: 'idle', pct: 0, err: ''};
+  const vn = v => String(v || '').replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  const newer = (a, b) => { for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return false; };
+  async function init() {
+    const C = window.Capacitor;
+    try {
+      if (C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.DragonBridgeUpdater) { S.kind = 'android'; S.cur = (await C.Plugins.App.getInfo()).version; }
+      else if (window.DBDesk) { const r = await DBDesk.canUpdate(); S.kind = r.kind; S.cur = r.version; }
+    } catch (e) { S.kind = null; }
+    if (S.kind && S.cur) try { $('#ver').textContent = '· ' + S.cur; } catch (e) {}
+    redraw(); return S.kind;
+  }
+  async function check(quiet) {
+    if (!S.kind || S.state === 'downloading') return; S.state = 'checking'; S.err = ''; redraw();
+    try {
+      const r = await fetch(API, {headers: {Accept: 'application/vnd.github+json'}, cache: 'no-store'}); if (!r.ok) throw new Error(r.status); const j = await r.json();
+      const ext = S.kind === 'android' ? '.apk' : '.exe', a = (j.assets || []).find(x => x.name.endsWith(ext));
+      S.latest = String(j.tag_name || '').replace(/^v/, ''); S.asset = a ? a.browser_download_url : null;
+      S.state = S.asset && newer(vn(S.latest), vn(S.cur)) ? 'available' : 'current';
+    } catch (e) { S.state = quiet ? 'idle' : 'error'; S.err = 'Couldn’t check for updates. Check your internet connection and try again.'; }
+    store.set(CKEY, String(Date.now())); redraw();
+  }
+  async function go() {
+    if (!S.asset || S.state === 'downloading') return; S.state = 'downloading'; S.pct = 0; S.err = ''; redraw();
+    try {
+      if (S.kind === 'android') { const U = Capacitor.Plugins.DragonBridgeUpdater, h = await U.addListener('progress', x => { S.pct = x.pct; redraw(); }); try { await U.downloadAndInstall({url: S.asset}); } finally { try { h.remove(); } catch (e) {} } S.state = 'installing'; }
+      else { DBDesk.onProgress(p => { S.pct = p; redraw(); }); await DBDesk.update(S.asset); S.state = 'restarting'; }
+    } catch (e) { S.state = 'error'; S.err = String(e && e.message || 'The update didn’t work.').replace(/^Error invoking remote method '[^']+': (Error: )?/, ''); }
+    redraw();
+  }
+  function box() {
+    if (!S.kind) return ''; const btn = (a, t) => `<div class="row" style="margin-top:6px"><button class="btn sm" data-a="${a}">${t}</button></div>`; let b = '';
+    if (S.state === 'checking') b = '<span class="lbl">Checking for updates…</span>';
+    else if (S.state === 'available') b = `<b>Version ${esc(S.latest)} is available.</b> You have ${esc(S.cur)}.${btn('updgo', 'Update now')}${S.kind === 'android' ? '<span class="lbl">Android will ask you to confirm the install (the first time, also to allow installs from Dragon Bridge). Your stats and settings are kept.</span>' : ''}`;
+    else if (S.state === 'downloading') b = `Downloading version ${esc(S.latest)}… ${S.pct}%<div class="updbar"><span style="width:${S.pct}%"></span></div>`;
+    else if (S.state === 'installing') b = `<b>Tap Install</b> on Android’s screen. Dragon Bridge opens again with version ${esc(S.latest)}.`;
+    else if (S.state === 'restarting') b = `Restarting with version ${esc(S.latest)}…`;
+    else if (S.state === 'current') b = `You have the latest version (${esc(S.cur)}).${btn('updchk', 'Check again')}`;
+    else if (S.state === 'error') b = `<span class="acerr" role="alert">${esc(S.err)}</span>${btn(S.asset && S.latest ? 'updgo' : 'updchk', 'Try again')}`;
+    else b = `You have version ${esc(S.cur)}.${btn('updchk', 'Check for updates')}`;
+    return `<div class="info" id="updbox"><b>Updates</b> · ${b}</div>`;
+  }
+  function redraw() {
+    const b = document.getElementById('updbox'); if (b) b.outerHTML = box();
+    const ub = document.getElementById('updbtn'); if (!ub) return;
+    ub.hidden = !['available', 'downloading', 'installing', 'restarting'].includes(S.state); ub.disabled = S.state !== 'available';
+    ub.textContent = S.state === 'downloading' ? `Updating… ${S.pct}%` : S.state === 'installing' ? 'Installing…' : S.state === 'restarting' ? 'Restarting…' : 'Update Available!';
+    ub.title = S.latest ? `Dragon Bridge ${S.latest} (you have ${S.cur})` : '';
+  }
+  // the title screen checks each time it opens (at most every few minutes, to stay within GitHub's limits)
+  let first = true;
+  function titleCheck() {
+    if (S.state === 'installing') { S.state = 'available'; redraw(); }   // back on the title with the installer gone (Android's prompt was cancelled): offer it again
+    if (!S.kind || ['available', 'downloading', 'restarting', 'checking'].includes(S.state)) return;
+    if (!first && Date.now() - (+store.get(CKEY) || 0) < 4 * 60e3) return; first = false; check(true);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.state === 'installing') setTimeout(() => { if (S.state === 'installing') { S.state = 'available'; redraw(); } }, 1500); });
+  return {S, init, check, go, box, titleCheck};
+})();
 
 /* ---------- start ---------- */
 const PUZZLES = /*PUZZLES*/[];
@@ -760,4 +1056,10 @@ $('#tlogo').src = im('logo');
 document.documentElement.style.setProperty('--bgimg', `url(${IMG.bg})`);
 try { if (typeof APP_VERSION === 'string') $('#ver').textContent = '· ' + APP_VERSION; } catch (e) {}
 toTitle();
+if (window.DB_SYNC) {
+  setTimeout(() => { try { acctRecovery(); } catch (e) {} SYNC.run(); }, 900);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') SYNC.run(); else if (Date.now() - SYNC.S.last > 60000) SYNC.run(); });
+  setInterval(() => SYNC.render(), 20000);
+}
+UPD.init().then(k => { if (k) setTimeout(() => UPD.titleCheck(), 800); });   // check on start (the title screen re-checks whenever it opens)
 </script>

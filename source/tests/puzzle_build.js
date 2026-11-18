@@ -12,10 +12,11 @@ function build(o) {
   const S = E.newState({wiz: o.wiz, seed: 7, first: 0, ed: 2, names: o.wiz.map(w => E.WIZ[w].s)});
   S.hand = [o.hand.map(take), o.opp.map(take)]; S.nest = (o.nest || []).map(take); S.power = o.power ? take(o.power) : null;
   // Normal rules throughout: both hands hold 4 cards, all 17 Action cards are in the game, and everyone draws back
-  // to 4. draws: the top of the deck, in the order it will be drawn (scripted, as part of the puzzle); the cards
-  // not named anywhere sit underneath in a fixed order.
+  // to 4. The draws are scripted, as part of the puzzle: draws lists the cards you will draw, in order, and oppDraws
+  // the opponent's. Each player's order is fixed whatever either of them plays (see drawCard in engine.js).
   if (S.hand[0].length !== 4 || S.hand[1].length !== 4) throw new Error(o.name + ': both hands must hold 4 cards');
-  const top = (o.draws || []).map(take); S.deck = pool.concat(top.reverse());
+  S.script = [(o.draws || []).map(take), (o.oppDraws || []).map(take)]; pool.forEach((c, i) => S.script[i % 2].push(c));   // every card left in the deck is in one player's script
+  S.deck = S.script[0].concat(S.script[1]).sort((x, y) => E.DECK.indexOf(y) - E.DECK.indexOf(x));
   S.pos = o.pos.slice(); S.dragon = o.dragon || 0; S.ready = (o.ready || [0, 0]).slice(); S.gems = (o.gems || [3, 3]).slice();
   S.white = (o.white || [0, 0]).slice(); S.supply = 8 - S.white[0] - S.white[1];
   const items = ALL_ITEMS.slice(), ti = x => { items.splice(items.indexOf(x), 1); return x; };
@@ -44,27 +45,27 @@ const PUZZLES = [
   { name: 'Green Means Go', goal: {type: 'escape', n: 3},
     // Two Gem teleports in two turns carry you to the Exit; the MOVE card has to be saved for the last turn.
     wiz: ['robot', 'omar'], gems: [3, 2], pos: [12, 9], ready: [2, 0], hand: ['hop', 'transfer', 'fireball', 'dart'], opp: ['leap', 'charge', 'charge', 'dazzle'], nest: ['insight'],
-    draws: ['shockwave', 'step', 'flamearrow', 'soda'],
+    draws: ['shockwave', 'flamearrow', 'gale', 'bait'], oppDraws: ['step', 'soda', 'gale', 'checkmate'],
     need: [['a Gem teleport on turn 1', (o, S) => o.act === 'tp' && S.turn === T1], ['a Gem teleport on turn 2', (o, S) => o.act === 'tp' && S.turn === T2]] },
   { name: 'Purple Patch', goal: {type: 'defeat', n: 2},
     // Eve (2nd Edition): start your turn on a purple tile for +2 Bump all turn.
-    wiz: ['eve', 'lori'], pos: [10, 7], ready: [1, 0], hand: ['flamearrow', 'soda', 'checkmate', 'dazzle'], opp: ['bait', 'transfer', 'charge', 'insight'], nest: ['gale'], draws: ['charge', 'dart', 'shockwave', 'gale', 'fireball'],
+    wiz: ['eve', 'lori'], pos: [10, 7], ready: [1, 0], hand: ['flamearrow', 'soda', 'checkmate', 'dazzle'], opp: ['bait', 'transfer', 'charge', 'insight'], nest: ['gale'], draws: ['charge', 'shockwave', 'fireball', 'hop'], oppDraws: ['dart', 'gale', 'leap', 'step'],
     need: [['ending turn 1 on a purple tile', (o, S, q) => q.kind === 'tile' && q.who === 0 && q.verb !== 'bump' && S.turn === T1 && [6, 8, 11, 13, 15].includes(o.tile)]] },
   { name: 'Retail Therapy', goal: {type: 'defeat', n: 2},
     // Buy Ruupart's Blade, then cash it in for a much bigger Bump.
-    wiz: ['bill', 'eve'], pos: [10, 7], ready: [3, 0], hand: ['dart', 'hop', 'soda', 'step'], opp: ['fireball', 'shockwave', 'gale', 'flamearrow'], nest: ['charge', 'transfer'], market: ['blade', 'backpack', 'thunderbox'], draws: ['insight', 'gale', 'bait', 'leap', 'dazzle'],
+    wiz: ['bill', 'eve'], pos: [10, 7], ready: [3, 0], hand: ['dart', 'hop', 'soda', 'step'], opp: ['fireball', 'shockwave', 'gale', 'flamearrow'], nest: ['charge', 'transfer'], market: ['blade', 'backpack', 'thunderbox'], draws: ['insight', 'leap', 'dazzle', 'charge'], oppDraws: ['gale', 'bait', 'checkmate'],
     need: [['buying an Item', o => o.act === 'buy']] },
   { name: 'Turn the Tables', goal: {type: 'escape', n: 2},
     // A Flight swaps the ends: the Threatened tiles beside you become the Exit.
-    wiz: ['trevor', 'peebnup'], pos: [5, 13], hand: ['transfer', 'step', 'hop', 'soda'], opp: ['bait', 'dazzle', 'charge', 'leap'], nest: ['fireball', 'dart', 'checkmate', 'charge'], draws: ['gale', 'shockwave'],
+    wiz: ['trevor', 'peebnup'], pos: [5, 13], hand: ['transfer', 'step', 'hop', 'soda'], opp: ['bait', 'dazzle', 'charge', 'leap'], nest: ['fireball', 'dart', 'checkmate', 'charge'], draws: ['gale', 'flamearrow', 'insight'], oppDraws: ['shockwave', 'gale'],
     need: [['Transfer going to the Nest on turn 1', (o, S) => o.card === 'transfer' && S.turn === T1]] },
   { name: 'Cheat Code', goal: {type: 'escape', n: 2},
     // A Bump earns the White Gem that pays for a Bridge Hack.
-    wiz: ['omar', 'robot'], gems: [2, 3], pos: [13, 9], white: [2, 0], hand: ['dart', 'hop', 'soda', 'transfer'], opp: ['bait', 'charge', 'leap', 'dazzle'], nest: ['insight', 'step'], hacks: ['sk8', 'lullaby', 'mondo'], draws: ['fireball', 'charge'],
+    wiz: ['omar', 'robot'], gems: [2, 3], pos: [13, 9], white: [2, 0], hand: ['dart', 'hop', 'soda', 'transfer'], opp: ['bait', 'charge', 'leap', 'dazzle'], nest: ['insight', 'step'], hacks: ['sk8', 'lullaby', 'mondo'], draws: ['fireball', 'gale', 'flamearrow'], oppDraws: ['charge', 'gale', 'shockwave', 'checkmate'],
     need: [['a Bridge Hack', o => o.act === 'hack'], ['Magic Dart', o => o.card === 'dart']] },
   { name: 'Clipped Wings', goal: {type: 'survive', n: 2},
     // Dazzle can pull a heavy card out of the Nest, so the next card brings a Roost instead of a Flight.
-    wiz: ['derby', 'eve'], pos: [14, 8], hand: ['dazzle', 'shockwave', 'transfer', 'fireball'], opp: ['flamearrow', 'hop', 'charge', 'step'], nest: ['bait', 'dart', 'gale', 'gale', 'insight'], draws: ['soda', 'leap', 'checkmate', 'charge'],
+    wiz: ['derby', 'eve'], pos: [14, 8], hand: ['dazzle', 'shockwave', 'transfer', 'fireball'], opp: ['flamearrow', 'hop', 'charge', 'step'], nest: ['bait', 'dart', 'gale', 'gale', 'insight'], draws: ['soda', 'checkmate'], oppDraws: ['leap', 'charge'],
     need: [['Dazzle', o => o.card === 'dazzle' && o.zone === 'hand'], ['taking a card out of the Nest', (o, S, q) => /^Dazzle/.test(q.prompt) && !!o.card]] },
 ];
 if (process.env.PZ) { const [k, o] = JSON.parse(process.env.PZ); Object.assign(PUZZLES[k - 1], o); if (process.env.ONLY) PUZZLES.splice(0, PUZZLES.length, PUZZLES[k - 1]); }

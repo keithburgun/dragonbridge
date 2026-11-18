@@ -47,7 +47,7 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   await pick("o.card === 'bait'"); if (await p.evaluate(() => !M.G.over && M.G.req.kind === 'pick')) await pick("o.id === 'no'"); if (await p.evaluate(() => !M.G.over)) await pick("o.act === 'pass'");
   ok(await p.evaluate(() => M.G.over && M.G.S.reason === 'pounce' && M.G.S.winner === 1), 'pounced');
   await p.waitForTimeout(560); await shot('pounce1');
-  ok(await p.evaluate(() => document.querySelector('#dragon .dfly').getAnimations().length === 1), 'the Dragon leaps');
+  ok(await p.evaluate(() => document.querySelector('#dragon .dface').getAnimations().length === 1 && document.querySelector('#dragon .dfly').getAnimations().length === 0), 'the Dragon leaps (its face only)');
   await p.waitForTimeout(450);
   ok(await p.evaluate(() => { const d = document.querySelector('#dragon .dface').getBoundingClientRect(), t = document.querySelector('#bridge .tok.me').getBoundingClientRect(); return Math.abs(d.left + d.width / 2 - t.left - t.width / 2) < 12 && Math.abs(d.top + d.height / 2 - t.top - t.height / 2) < 12 && document.querySelector('#bridge .tok.me').classList.contains('squash'); }), 'and lands on the Wizard');
   await p.waitForTimeout(350); ok(await banner() === 'Derby was POUNCED!', 'first line: ' + await banner());
