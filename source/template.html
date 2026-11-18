@@ -6,7 +6,7 @@
 :root{
   color-scheme:dark;
   --bg:#2a0710; --bg2:#3b0c18; --panel:#4a1220; --panel2:#5d1a2b; --line:#7c2c3f;
-  --fg:#fff3df; --dim:#e0b9a8; --gold:#ffd86b; --gold2:#f0a93a; --teal:#35c6c0; --orange:#ff7a2f;
+  --fg:#fff3df; --dim:#f1d2c4; --gold:#ffd86b; --gold2:#f0a93a; --teal:#35c6c0; --orange:#ff7a2f;
   --out:#120308; --good:#7be06a; --bad:#ff5a5a; --move:#3fbf7a; --bump:#4d8dff; --tp:#ff5fc0;
   --disp:'Cormorant Garamond','Palatino Linotype',Palatino,Georgia,serif;
   --body:'Fira Sans','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
@@ -17,7 +17,7 @@ body{background:var(--bg);color:var(--fg);font:400 15px/1.4 var(--body);overflow
 button{font:inherit;color:inherit;cursor:pointer}
 h1,h2,h3{font-family:var(--disp);font-style:italic;font-weight:700;margin:0;text-wrap:balance;color:var(--gold)}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow:auto;
-  background:radial-gradient(120% 80% at 50% 0%,var(--bg2),var(--bg) 70%)}
+  background:var(--bgimg,none) center/cover no-repeat,var(--bg)}   /* --bgimg: the red backdrop (img/bg.webp), set at start-up */
 /* Everything lives in #app, which is a size container: the layout responds to #app's size, not the window's.
    Mobile View makes #app a phone-shaped portrait column in the middle of the window. */
 #app{position:relative;height:100%;margin-inline:auto;container-type:size;container-name:app;contain:layout size style;overflow:hidden}
@@ -31,7 +31,7 @@ body.mview{background:var(--out)}
 .lbl{color:var(--dim);font-size:.85rem}
 /* title */
 #title{align-items:center;justify-content:center;gap:14px;text-align:center}
-#title .logo{width:min(46cqw,210px);aspect-ratio:1;border-radius:50%;box-shadow:0 0 0 4px var(--gold2),0 12px 40px #0009}
+#title .logo{width:min(46cqw,210px);aspect-ratio:1;border-radius:50%;box-shadow:0 12px 40px #0009}
 #title h1{font-size:clamp(2.6rem,9cqw,4.6rem);line-height:.95;text-shadow:0 3px 0 #7a2a12,0 8px 24px #000a}
 .tmenu{display:flex;flex-direction:column;gap:8px;width:min(100%,300px)}
 .tbtn{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.7em;font-weight:600;font-size:1.05rem}
@@ -50,7 +50,7 @@ body.mview{background:var(--out)}
 /* game */
 #game{padding-block:6px;gap:10px;overflow:hidden;flex-direction:row}
 #main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px;overflow-x:hidden;overflow-y:auto}
-#logpane{display:none;flex:none;width:clamp(200px,20cqw,290px);flex-direction:column;gap:6px;background:#0003;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-height:0}
+#logpane{display:none;flex:none;width:clamp(200px,20cqw,290px);flex-direction:column;gap:6px;background:#2a0710b3;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-height:0}
 #logpane h4{margin:0;font:800 .68rem/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 #loglive{flex:1 1 auto;overflow-y:auto;min-height:0}
 @container app (orientation:landscape) and (min-width:900px){#logpane{display:flex} #ticker{display:none} #mebar [data-a="log"]{display:none}}
@@ -110,7 +110,7 @@ body.mview{background:var(--out)}
 #dragon .dface img{width:100%;height:100%;border-radius:50%;display:block}
 #dpower .cardb img{width:calc(var(--dw)*.74);box-shadow:0 0 0 2px var(--orange),0 2px 8px #000c}
 #table{flex:1 0 auto;display:flex;gap:10px;align-items:flex-start;align-content:flex-start;justify-content:center;flex-wrap:wrap;padding-block:2px}
-.slot{display:flex;flex-direction:column;gap:3px;align-items:center;background:#0003;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
+.slot{display:flex;flex-direction:column;gap:3px;align-items:center;background:#2a0710b3;border:1px solid var(--line);border-radius:10px;padding:5px 7px}
 .slot h4{margin:0;font:800 .68rem/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
 .slot .cards{display:flex;gap:4px;align-items:center;min-height:calc(var(--mini)*1.36)}
 .nest .cards .cardb{margin-left:calc(var(--mini)*-.45)} .nest .cards .cardb:first-child{margin-left:0}
@@ -747,6 +747,7 @@ if (P.opt.opp === P.opt.wiz) P.opt.opp = 'random';
 function applyView() { document.body.classList.toggle('mview', !!P.opt.mview); hidePeek(); }
 applyView();
 $('#tlogo').src = im('logo');
+document.documentElement.style.setProperty('--bgimg', `url(${IMG.bg})`);
 try { if (typeof APP_VERSION === 'string') $('#ver').textContent = '· ' + APP_VERSION; } catch (e) {}
 toTitle();
 </script>
