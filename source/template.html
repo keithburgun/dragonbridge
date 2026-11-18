@@ -57,10 +57,12 @@ body.mview{background:var(--out)}
 #goal{flex:none;text-align:center;background:var(--gold);color:#3b0c18;font-weight:800;border-radius:10px;padding:5px 10px;line-height:1.25}
 #wingrow{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px 10px;font-size:.82rem;min-height:26px}
 #wingrow .wings{display:flex;gap:2px;align-items:center}
+#wingrow .pip{width:clamp(9px,1.2cqw,14px);aspect-ratio:5/7;border-radius:2px;background:var(--gold);box-shadow:0 0 0 1px #0006} #wingrow .pip.off{background:#fff3;box-shadow:none}
+#wingrow .grp{display:flex;align-items:center;gap:6px;white-space:nowrap} #wingrow .grp.hot b.n{color:var(--bad)}
 #wingrow .wing{width:clamp(15px,2cqw,24px);aspect-ratio:1;display:block}
 #wingrow .wing.off{filter:grayscale(1) brightness(.9);opacity:.5}
 #wingrow b{font-variant-numeric:tabular-nums}
-#wingrow.hot b.n{color:var(--bad)}
+
 .bar{display:flex;align-items:center;gap:8px;min-width:0;flex:none}
 .bar .face{width:clamp(34px,5cqw,52px);aspect-ratio:1;border-radius:50%;border:3px solid var(--teal);flex:none;cursor:pointer;padding:0;background:none}
 .bar .face img{width:100%;height:100%;border-radius:50%;display:block}
@@ -94,7 +96,7 @@ body.mview{background:var(--out)}
 .tile.can.mv{background:#0a2a9c99;box-shadow:inset 0 0 0 3px #86b4ff;animation:pulseb 1.1s infinite alternate}
 .tile.can.mv:hover,.tile.can.mv:focus-visible{background:#2f6bffcc}
 @keyframes pulseb{from{background:#0a2a9c77}to{background:#1746d6b0}}
-.tok{position:absolute;width:var(--tok);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--teal);box-shadow:0 3px 8px #000c;transition:left .6s cubic-bezier(.3,1.25,.5,1),opacity .4s,filter .3s;pointer-events:none;z-index:3;background:#000}
+.tok{position:absolute;width:calc(var(--tok)*.8);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--teal);box-shadow:0 3px 8px #000c;transition:left .6s cubic-bezier(.3,1.25,.5,1),opacity .4s,filter .3s;z-index:3;background:#000;cursor:pointer}
 .tok.squash{filter:grayscale(1) brightness(.55)} .tok.squash img{transform:scale(.8) rotate(-12deg);transition:transform .2s}
 #bridge.shake{animation:shake .5s} @keyframes shake{10%,50%,90%{transform:translate(-5px,3px)}30%,70%{transform:translate(5px,-3px)}}
 .tok img{width:100%;height:100%;border-radius:50%;display:block}
@@ -218,7 +220,7 @@ const cardImg = (kind, id) => im(kind === 'wiz' ? 'wz_' + id : kind === 'item' ?
 const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 /* ---------- profile (saved in this browser) ---------- */
-const DEF = {opt: {mview: false, ed2: true, speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, elo: 1000, bestElo: 1000, rankGames: 0, daily: {}, pz: {}, trophies: 0, tutDone: false, seen: {}};
+const DEF = {opt: {mview: false, ed2: true, speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, elo: 1000, bestElo: 1000, rankGames: 0, daily: {}, pz2: {}, trophies: 0, tutDone: false, seen: {}};
 let P = clone(DEF), MEM = {};
 const store = {get(k) { try { return localStorage.getItem(k); } catch (e) { return MEM[k] || null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { MEM[k] = v; } }, del(k) { try { localStorage.removeItem(k); } catch (e) {} delete MEM[k]; }};
 function loadProf() { try { const j = JSON.parse(store.get('db_profile') || 'null'); if (j) { P = Object.assign(clone(DEF), j); P.opt = Object.assign(clone(DEF.opt), j.opt); } } catch (e) {} }
@@ -277,7 +279,7 @@ function startMatch(cfg) {
   const ge = $('#goal'); ge.hidden = !cfg.puzzle;
   if (cfg.puzzle) ge.textContent = puzzleGoal(cfg.puzzle);
   saveMatch(); render(); pump();
-  if (cfg.puzzle) openOv(`<h2 style="text-align:center">Puzzle ${PUZZLES.indexOf(cfg.puzzle) + 1}</h2><p style="margin:0;text-align:center;font-size:1.3rem;font-weight:800">${esc(puzzleGoal(cfg.puzzle))}</p><div class="acts"><button class="btn pri" data-a="close" autofocus>Start</button></div>`);
+  if (cfg.puzzle) openOv(`<p class="lbl" style="margin:0;text-align:center">Puzzle ${PUZZLES.indexOf(cfg.puzzle) + 1}</p><h2 style="text-align:center">${esc(cfg.puzzle.name)}</h2><p style="margin:0;text-align:center;font-size:1.3rem;font-weight:800">${esc(puzzleGoal(cfg.puzzle))}</p><div class="acts"><button class="btn pri" data-a="close" autofocus>Start</button></div>`);
 }
 function saveMatch() { if (!M || M.G.over || M.cfg.puzzle) return; store.set('db_save', JSON.stringify({snap: M.G.snap, decs: M.G.decs, cfg: M.cfg})); }
 function resumeMatch() {
@@ -289,11 +291,11 @@ function pump() {
   const G = M.G;
   if (G.over) { render(); return drama(() => finish()); }
   const q = G.req;
-  if (M.cfg.puzzle && G.S.turn > M.cfg.puzzle.turn + 1) { render(); return finish(true); }
+  if (M.cfg.puzzle && puzzleTurnsLeft(M.cfg.puzzle, G.S) <= 0) { render(); return finish(); }   // the puzzle's turns are used up
   render();
   if (q.p === HUMAN) { coachFor(q); return; }
   M.busy = true;
-  setTimeout(() => { if (!M || M.G !== G) return; const a = M.cfg.puzzle ? puzzleReply(G, HUMAN) : aiChoose(G, M.cfg.level); M.busy = false; answer(a); }, 520 * speed());
+  setTimeout(() => { if (!M || M.G !== G) return; const a = M.cfg.puzzle ? puzzleReply(G, M.cfg.puzzle, M.memo = M.memo || new Map()) : aiChoose(G, M.cfg.level); M.busy = false; answer(a); }, 520 * speed());
 }
 function answer(i) {
   const G = M.G, S = G.S, n0 = S.log.length, pos0 = S.pos.slice(), fl0 = S.flights;
@@ -362,17 +364,18 @@ function render() {
     });
   }
   hidePeek();
+  if (M.cfg.puzzle && M.cfg.puzzle.goal.n > 1) { const z = M.cfg.puzzle, k = Math.min(z.goal.n, Math.floor((S.turn - z.turn) / 2) + 1); $('#goal').innerHTML = `${esc(puzzleGoal(z))} <span style="font-weight:600;font-size:.85em">· turn ${k} of ${z.goal.n}</span>`; }
   // bridge
   let b = '';
   const dz = S.dragon === 0 ? 0 : 76.19;
   b += `<div class="zone threat" style="left:${dz}%">THREATENED</div><div class="zone exit" style="left:${76.19 - dz}%">EXIT</div>`;
   for (let t = 0; t <= LAST; t++) { const c = tiles[t]; b += `<button class="tile${c ? ' can' + (q.kind === 'tile' ? ' mv' : '') : ''}" style="left:${t * 4.762}%" ${c ? `data-a="ans" data-i="${c.i}"` : 'tabindex="-1" disabled'} aria-label="${esc(tileName(t))}">${c && c.label ? `<span class="tl">${esc(c.label)}</span>` : ''}</button>`; }
-  for (const p of [1, 0]) b += `<div class="tok ${p ? 'opp' : 'me'}${S.away[p] ? ' off' : ''}" style="left:${(S.pos[p] + .5) * 4.762}%"><img src="${face(S.wiz[p])}" alt=""><span class="you">${p ? 'CPU' : 'YOU'}</span></div>`;
+  for (const p of [1, 0]) b += `<div class="tok ${p ? 'opp' : 'me'}${S.away[p] ? ' off' : ''}" data-a="tok" data-id="${S.wiz[p]}" data-peek="wz_${S.wiz[p]}" style="left:${(S.pos[p] + .5) * 4.762}%"><img src="${face(S.wiz[p])}" alt=""><span class="you">${p ? 'CPU' : 'YOU'}</span></div>`;
   const br = $('#bridge');
   if (!br.dataset.init) { br.style.backgroundImage = `url(${im('bridge')})`; br.dataset.init = 1; $('#dragon .dface img').src = face('dragon'); }
   // keep token elements alive so they animate between tiles
   const old = br.querySelectorAll('.tok');
-  if (old.length === 2 && br.dataset.w === S.wiz.join()) { const keep = [...old]; br.querySelectorAll(':scope > :not(.tok)').forEach(e => e.remove()); const tmp = document.createElement('div'); tmp.innerHTML = b; [...tmp.children].forEach(e => { if (!e.classList.contains('tok')) br.insertBefore(e, keep[0]); }); [1, 0].forEach((p, k) => { keep[k].style.left = (S.pos[p] + .5) * 4.762 + '%'; keep[k].classList.toggle('off', !!S.away[p]); keep[k].querySelector('img').src = face(S.wiz[p]); }); }
+  if (old.length === 2 && br.dataset.w === S.wiz.join()) { const keep = [...old]; br.querySelectorAll(':scope > :not(.tok)').forEach(e => e.remove()); const tmp = document.createElement('div'); tmp.innerHTML = b; [...tmp.children].forEach(e => { if (!e.classList.contains('tok')) br.insertBefore(e, keep[0]); }); [1, 0].forEach((p, k) => { keep[k].style.left = (S.pos[p] + .5) * 4.762 + '%'; keep[k].classList.toggle('off', !!S.away[p]); keep[k].querySelector('img').src = face(S.wiz[p]); keep[k].dataset.id = S.wiz[p]; keep[k].dataset.peek = 'wz_' + S.wiz[p]; }); }
   else { br.innerHTML = b; br.dataset.w = S.wiz.join(); }
   const dg = $('#dragon'), side = String(S.dragon), fly = dg.querySelector('.dfly');
   if (dg.dataset.side !== side) {
@@ -390,13 +393,15 @@ function render() {
   const cardB = (kind, id, extra = '') => `<button class="cardb" data-a="zoom${kind}" data-id="${id}" data-peek="${kind === 'item' ? 'it_' : kind === 'hack' ? 'hk_' : ''}${id}" ${extra} aria-label="${esc((kind === 'item' ? ITEMS : kind === 'hack' ? HACKS : ACTIONS)[id].n)}"><img src="${cardImg(kind, id)}" alt=""></button>`;
   const opt = (pred) => { const s = strip.find(x => pred(x.o)); return s ? `data-ci="${s.i}"` : ''; };
   $('#dpower').innerHTML = S.power ? cardB('card', S.power) : '';
-  let wr = '<span class="wings" role="img" aria-label="' + w + ' of ' + need + ' Wings">';
+  let wr = '<span class="wings" role="img" aria-label="' + w + ' of ' + need + ' Wings">', rr = '<span class="wings" role="img" aria-label="' + S.nest.length + ' of 7 cards">';
   for (let k = 0; k < Math.max(need, w); k++) wr += `<img class="wing${k < w ? '' : ' off'}" src="${im('icon_wing')}" alt="">`;
-  const wre = $('#wingrow'); wre.className = w >= need - 2 ? 'hot' : '';
-  wre.innerHTML = wr + `</span><span><b class="n">${w}/${need}</b> Wings to Flight</span>` + (S.power ? `<span class="lbl">Dragon Power: <b>${esc(ACTIONS[S.power].n)}</b>${ACTIONS[S.power].pw ? ' · ' + esc(ACTIONS[S.power].pw) : ' (no effect)'}</span>` : '');
+  for (let k = 0; k < 7; k++) rr += `<span class="pip${k < S.nest.length ? '' : ' off'}"></span>`;
+  $('#wingrow').innerHTML = `<span class="grp${w >= need - 2 ? ' hot' : ''}">${wr}</span><span><b class="n">${w}/${need}</b> Wings to Flight</span></span>`
+    + `<span class="grp${S.nest.length >= 6 ? ' hot' : ''}">${rr}</span><span><b class="n">${S.nest.length}/7</b> cards to Roost</span></span>`
+    + (S.power ? `<span class="lbl">Dragon Power: <b>${esc(ACTIONS[S.power].n)}</b>${ACTIONS[S.power].pw ? ' · ' + esc(ACTIONS[S.power].pw) : ' (no effect)'}</span>` : '');
   $('#table').innerHTML = `
     <div class="slot nest"><h4>Dragon Nest</h4><div class="cards">${S.nest.map(c => cardB('card', c, opt(o => o.zone === 'nest' && o.card === c))).join('') || '<div class="empty">empty</div>'}</div>
-      <div class="meter"><span class="${S.nest.length >= 6 ? 'hot' : ''}" style="${S.nest.length >= 6 ? 'color:var(--bad)' : ''}">${S.nest.length}/7 cards to Roost</span> <span class="lbl" title="Cards left in the Action Deck">· Deck ${S.deck.length}</span></div></div>
+      <div class="meter"><span class="lbl" title="Cards left in the Action Deck">Deck ${S.deck.length}</span></div></div>
     <div class="slot"><h4>Item Market · ${itemCost(S)} Gems</h4><div class="cards">${S.market.map(i => cardB('item', i, opt(o => o.item === i))).join('') || '<div class="empty">empty</div>'}</div></div>
     <div class="slot"><h4>Bridge Hacks</h4><div class="cards">${S.hacks.map(h => cardB('hack', h, opt(o => o.hack === h))).join('')}</div><div class="meter wcount"><img src="${im('icon_white')}" alt="">${S.supply} in supply</div></div>`;
   for (const e of document.querySelectorAll('#table [data-ci]')) e.classList.add('sel');
@@ -533,15 +538,16 @@ const rankOf = elo => Math.max(1, Math.min(10, Math.floor((elo - 800) / 100) + 1
 const levelForRank = r => r <= 2 ? 'easy' : r <= 5 ? 'normal' : r <= 8 ? 'hard' : 'expert';
 function grant(id, out) { if (!P.ach[id]) { P.ach[id] = todayKey(); out.push(ACH.find(a => a[0] === id)); } }
 function dailyStreak() { let n = 0; const d = new Date(); for (;;) { const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); if (P.daily[k] === 'W') n++; else if (n || k !== todayKey()) break; d.setDate(d.getDate() - 1); if (n > 400) break; } return n; }
-function finish(puzzleFail) {
-  const S = M.G.S, cfg = M.cfg, won = S.winner === HUMAN && !puzzleFail, got = [];
+function finish() {
+  const S = M.G.S, cfg = M.cfg, won = cfg.puzzle ? puzzleOk(cfg.puzzle, S) : S.winner === HUMAN, got = [];
   store.del('db_save');
-  if (!speed() || (S.reason !== 'escape' && S.reason !== 'pounce') || puzzleFail) (won ? SFX.win : SFX.lose)();
+  if (!speed() || (S.reason !== 'escape' && S.reason !== 'pounce') || S.winner == null) (won ? SFX.win : SFX.lose)();
   let extra = '', acts = '<button class="btn pri" data-a="again" autofocus>Play again</button>';
   if (cfg.puzzle) {
-    if (won) { P.pz[cfg.puzzle.id] = 1; if (PUZZLES.every(z => P.pz[z.id])) grant('pz', got); }
-    const next = PUZZLES.find(z => !P.pz[z.id]);
-    extra = won ? '' : `<p>${S.winner === 1 ? 'You were pounced.' : cfg.puzzle.goal === 'escape' ? 'You didn’t escape.' : esc(WIZ[S.wiz[1]].s) + ' got away.'}</p>`;
+    if (won) { P.pz2[cfg.puzzle.id] = 1; if (PUZZLES.every(z => P.pz2[z.id])) grant('pz', got); }
+    const next = PUZZLES.find(z => !P.pz2[z.id]);
+    const on = esc(WIZ[S.wiz[1]].s), gt = cfg.puzzle.goal.type;
+    extra = won ? '' : `<p>${S.winner === 1 ? (S.reason === 'escape' ? on + ' escaped.' : 'You were pounced.') : gt === 'escape' ? 'You didn’t escape in time.' : on + ' got away.'}</p>`;
     acts = (won ? (next ? `<button class="btn pri" data-a="pzgo" data-id="${next.id}" autofocus>Next puzzle</button>` : '') : '<button class="btn pri" data-a="again" autofocus>Try again</button>') + '<button class="btn" data-a="play">Puzzle list</button>';
   } else {
     const k = cfg.mode + ':' + (cfg.level || ''), st = P.st[k] = P.st[k] || {w: 0, l: 0}; won ? st.w++ : st.l++;
@@ -602,11 +608,10 @@ function launch() {
 }
 function tourGo() { const T = P.tour, lv = T.level, up = {easy: 'normal', normal: 'hard', hard: 'expert', expert: 'expert'}; startMatch({mode: 'tour', wiz: [T.wiz, tourOpp(T)], level: T.round === 2 ? up[lv] : lv, ed: T.ed === 1 ? 1 : 2}); }
 function rankGo() { const r = rankOf(P.elo), oppElo = Math.max(700, P.elo + Math.round((Math.random() - .5) * 160)), ro = rankOf(oppElo); startMatch({mode: 'ranked', ed: P.opt.ed2 ? 2 : 1, wiz: [P.opt.wiz, randWiz(P.opt.wiz)], level: levelForRank(ro), oppElo, oppName: BOTS[Math.floor(Math.random() * BOTS.length)] + ' (' + oppElo + ')'}); }
-/* What a puzzle asks for: one short line. 'escape' = you can win outright this turn; 'trap' = the opponent is
-   pounced at the end of their reply, so the win comes on turn 2. */
+/* What a puzzle asks for: one short line. Turns are your own turns. */
 function puzzleGoal(z) {
-  const goal = z.goal || (forcedWin(z.snap, [], 0, {n: 60000}, 1) ? 'escape' : 'trap');
-  return goal === 'escape' ? 'Escape this turn!' : `Defeat ${WIZ[z.snap.wiz[1]].s} in 2 turns!`;
+  const n = z.goal.n, t = n === 1 ? '1 turn' : n + ' turns';
+  return z.goal.type === 'escape' ? (n === 1 ? 'Escape this turn!' : `Escape in ${t}!`) : z.goal.type === 'defeat' ? `Defeat ${WIZ[z.snap.wiz[1]].s} in ${t}!` : `Survive ${t}!`;
 }
 function puzzleGo(id) { const z = PUZZLES.find(x => x.id === +id); startMatch({mode: 'puzzle', puzzle: z, wiz: z.snap.wiz, level: 'expert'}); }
 
@@ -636,7 +641,7 @@ function drawSetup() {
       <div class="row"><button class="btn pri" data-a="launch" style="font-size:1.1rem;padding:.6em 2em">${rec ? 'Replay for fun' : 'Play today’s challenge'}</button></div>${wizInfo(d.wiz[0])}${wizInfo(d.wiz[1])}`;
   } else {
     h += `<p class="lbl" style="margin:0">Each puzzle has one goal, shown at the top of the screen.</p>
-      <div class="picks">${PUZZLES.map((z, i) => `<button class="pick" data-a="pzgo" data-id="${z.id}"><img src="${face(z.snap.wiz[0])}" alt=""><div><b>${P.pz[z.id] ? '✓ ' : ''}Puzzle ${i + 1}</b><span>${esc(puzzleGoal(z))}</span></div></button>`).join('') || '<span class="lbl">No puzzles yet.</span>'}</div>`;
+      <div class="picks">${PUZZLES.map((z, i) => `<button class="pick" data-a="pzgo" data-id="${z.id}"><img src="${face(z.snap.wiz[0])}" alt=""><div><b>${P.pz2[z.id] ? '✓ ' : ''}${i + 1}. ${esc(z.name)}</b><span>${esc(puzzleGoal(z))}</span></div></button>`).join('') || '<span class="lbl">No puzzles yet.</span>'}</div>`;
   }
   $('#setupbody').innerHTML = h;
 }
@@ -659,7 +664,7 @@ function statsSheet() {
   for (const [k, v] of Object.entries(P.st)) { const [m, l] = k.split(':'); rows.push(`<tr><td>${{versus: 'Versus', tour: 'Tournament', ranked: 'Ranked', daily: 'Daily Challenge'}[m] || m}${l ? ' · ' + LEVEL_NAMES[l] : ''}</td><td>${v.w}</td><td>${v.l}</td></tr>`); tot.w += v.w; tot.l += v.l; }
   const wz = WIZ_IDS.filter(w => P.wz[w]).map(w => `<tr><td>${esc(WIZ[w].n)}</td><td>${P.wz[w].w}</td><td>${P.wz[w].l}</td></tr>`).join('');
   const na = ACH.filter(a => P.ach[a[0]]).length;
-  openOv(`<h2>Stats</h2><div class="info">Matches: <b>${tot.w + tot.l}</b> · Wins: <b>${tot.w}</b> · Ranked: <b>Rank ${rankOf(P.elo)}</b> (Elo ${P.elo}) · Trophies: <b>${P.trophies}</b> · Daily streak: <b>${dailyStreak()}</b> · Puzzles: <b>${PUZZLES.filter(z => P.pz[z.id]).length}/${PUZZLES.length}</b></div>
+  openOv(`<h2>Stats</h2><div class="info">Matches: <b>${tot.w + tot.l}</b> · Wins: <b>${tot.w}</b> · Ranked: <b>Rank ${rankOf(P.elo)}</b> (Elo ${P.elo}) · Trophies: <b>${P.trophies}</b> · Daily streak: <b>${dailyStreak()}</b> · Puzzles: <b>${PUZZLES.filter(z => P.pz2[z.id]).length}/${PUZZLES.length}</b></div>
     ${rows.length ? `<table class="st"><tr><th>Mode</th><th>Won</th><th>Lost</th></tr>${rows.join('')}</table>` : '<p class="lbl">No matches played yet.</p>'}
     ${wz ? `<table class="st"><tr><th>Wizard</th><th>Won</th><th>Lost</th></tr>${wz}</table>` : ''}
     <h3>Achievements ${na}/${ACH.length}</h3>${ACH.map(a => `<div class="ach ${P.ach[a[0]] ? '' : 'off'}"><i>${a[1]}</i><div><b>${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}
@@ -726,6 +731,10 @@ document.addEventListener('click', ev => {
     case 'rankgo': rankGo(); break;
     case 'pzgo': puzzleGo(id); break;
     case 'again': { const c = M.cfg; if (c.mode === 'tour' || c.mode === 'ranked') { show('setup'); closeOv(); drawSetup(); } else startMatch(Object.assign({}, c, c.mode === 'versus' && P.opt.opp === 'random' && !c.tutorial ? {wiz: [c.wiz[0], randWiz(c.wiz[0])]} : {})); break; }
+    case 'tok': {   // a Wizard token: a tap goes through to a tile you can choose underneath, otherwise it shows the Wizard's card
+      const t = document.elementsFromPoint(ev.clientX, ev.clientY).find(e => e.classList && e.classList.contains('tile') && e.classList.contains('can'));
+      if (t && M && !M.busy) answer(+t.dataset.i); else zoomThing('wiz', id); break;
+    }
     case 'tip': tip(); break;
     case 'undo': undo(); break;
     case 'log': logSheet(); break;

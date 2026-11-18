@@ -56,16 +56,20 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
   // daily
   await p.evaluate(() => toTitle()); await p.click('#title [data-a="play"]'); await p.click('[data-a="setmode"][data-v="daily"]'); await p.click('[data-a="launch"]'); await playOut(); await p.waitForTimeout(400);
   ok(/Today/.test(await p.textContent('#sheet')), 'daily result recorded'); await p.evaluate(() => toTitle());
-  // puzzles: the winning line must solve each one; a random line must be judged too
+  // puzzles: each opens with its name and a one-line goal, and its solution (found by search) solves it in the browser
   const np = await p.evaluate(() => PUZZLES.length); ok(np >= 8, 'puzzles present');
+  const GOAL = /^(Escape this turn!|Escape in \d turns!|Defeat .+ in \d turns?!|Survive \d turns?!)/;
   for (let i = 1; i <= np; i++) {
     await p.evaluate(id => puzzleGo(id), i); await p.waitForTimeout(100); if (i === 1) await shot('puzzle');
-    ok(/^Puzzle \d+(Escape this turn!|Defeat .+ in 2 turns!)Start$/.test((await p.textContent('#sheet')).trim()), `puzzle ${i} opens with a one-line goal`); await p.click('#sheet [data-a="close"]'); ok(/^(Escape this turn!|Defeat .+ in 2 turns!)$/.test(await p.textContent('#goal')), 'goal stays on screen');
+    const intro = await p.evaluate(() => [...document.querySelectorAll('#sheet > *')].map(e => e.textContent.trim()));
+    ok(intro.length === 4 && /^Puzzle \d+$/.test(intro[0]) && intro[1] === await p.evaluate(id => PUZZLES[id - 1].name, i) && GOAL.test(intro[2]) && intro[3] === 'Start', `puzzle ${i} opens with its name and a one-line goal: ` + intro.join(' / '));
+    await p.click('#sheet [data-a="close"]'); ok(GOAL.test(await p.textContent('#goal')), 'goal stays on screen');
     ok(await p.evaluate(() => M.G.S.wiz[0] !== M.G.S.wiz[1]), 'puzzle is not a mirror match');
-    await playOut(() => { const G = M.G; for (let k = 0; k < G.req.opts.length; k++) if (forcedWin(G.snap, G.decs.concat(k), 0, {n: 60000}, G.S.cur === 0 ? 2 : 1)) return k; return 0; });
+    await playOut(() => puzzleHint(M.G, M.cfg.puzzle, window.__memo = window.__memo && window.__mz === M.cfg.puzzle ? window.__memo : (window.__mz = M.cfg.puzzle, new Map())));
     await p.waitForTimeout(350); ok(/solved/i.test(await p.textContent('#sheet h2', {timeout: 3000}).catch(() => 'no result sheet')), `puzzle ${i} not solved by its winning line`);
   }
   await p.evaluate(() => { puzzleGo(1); closeOv(); }); await playOut(); await p.waitForTimeout(350); ok(await p.locator('#sheet h2').count() === 1, 'puzzle verdict after random play');
+  await p.evaluate(() => { puzzleGo(4); closeOv(); }); await playOut(() => M.G.req.opts.length - 1); await p.waitForTimeout(350); ok(/Not this time/.test(await p.textContent('#sheet h2', {timeout: 3000}).catch(() => '')), 'a multi-turn puzzle played badly is failed when its turns run out');
   await p.evaluate(() => toTitle());
   // tutorial shows the coach
   await p.evaluate(() => toTitle()); await p.click('#title [data-a="tutorial"]'); await p.waitForTimeout(300); ok(await p.isVisible('#coach'), 'tutorial coach'); await shot('tutorial');

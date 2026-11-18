@@ -34,6 +34,6 @@ os.makedirs(os.path.join(H, 'dist'), exist_ok=True)
 full = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>body{margin:0}[hidden]{display:none!important}</style>\n' + page + '\n</html>\n'
 with zipfile.ZipFile(os.path.join(H, 'dist', 'dragonbridge-web.zip'), 'w', zipfile.ZIP_DEFLATED) as z: z.writestr('index.html', full)
 wr('dist/page.html', page); wr('dist/dragonbridge.html', full); wr('../www/index.html', full)
-EXPORTS = 'ED2,itemText,hackText,wizLines,ACTIONS,DECK,ITEMS,HACKS,WIZ,WIZ_IDS,newState,Game,simulate,snapshot,checkState,evalS,aiChoose,LEVELS,play,clone,probe,forcedWin,puzzleReply,isExit,isThreat,wings,flightNeed'
+EXPORTS = 'ED2,itemText,hackText,wizLines,ACTIONS,DECK,ITEMS,HACKS,WIZ,WIZ_IDS,newState,Game,simulate,snapshot,checkState,evalS,aiChoose,LEVELS,play,clone,probe,puzzleTurns,puzzleOk,puzzleForced,puzzleTurnsLeft,puzzleReply,puzzleHint,isExit,isThreat,wings,flightNeed'
 wr('tests/eng_all.js', engine + '\nmodule.exports={' + EXPORTS + '};\n')
 print(f'dist/dragonbridge.html  {len(full) / 1e6:.2f} MB  ({len(imgs)} images, {pages} rulebook pages)')

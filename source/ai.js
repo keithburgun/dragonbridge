@@ -149,20 +149,42 @@ function probe(snap, decs, turns, det) {   // replay decs; stop at the next choi
     r = g.next(decs[i++]);
   }
 }
-/* Can `me` force a win within `turns` turns of the snapshot (default: before the end of the opponent's next turn),
-   whatever the opponent does? ctx = {n: node budget} */
-function forcedWin(snap, decs, me, ctx, turns = 2) {
+/* Puzzles. The human is player 0. z.goal = {type, n}:
+     escape  n   escape within n of your own turns                      (the puzzle runs 2n-1 turns)
+     defeat  n   the opponent is pounced by the end of their nth turn   (2n turns)
+     survive n   you have not lost after n of your turns and n of theirs (2n turns)
+   Winning any other way inside that time also counts. */
+const puzzleTurns = z => z.goal.type === 'escape' ? 2 * z.goal.n - 1 : 2 * z.goal.n;
+const puzzleOk = (z, S) => z.goal.type === 'survive' ? S.winner !== 1 : S.winner === 0;
+/* Can player 0 force success, whatever the opponent does? snap is a turn-start snapshot, decs the choices made so far
+   this turn, turnsLeft counts this turn. ctx = {n: node budget, memo: Map, ban?: (option, S) => true to forbid one of
+   player 0's options (used to check that a puzzle really needs its key move)}. */
+function puzzleForced(snap, decs, turnsLeft, z, ctx) {
   if (--ctx.n < 0) { ctx.cut = true; return false; }
-  const r = probe(snap, decs, turns);
-  if (r.S.winner === me) return true;
-  if (r.S.winner != null || !r.req) return false;
-  const mine = r.req.p === me;
-  for (let i = 0; i < r.req.opts.length; i++) { const w = forcedWin(snap, decs.concat(i), me, ctx, turns); if (mine && w) return true; if (!mine && !w) return false; }
+  const r = probe(snap, decs, 1);
+  if (r.S.winner != null) return puzzleOk(z, r.S);
+  if (!r.req) {   // the turn is over; r.S is the next turn's starting position
+    if (turnsLeft <= 1) return puzzleOk(z, r.S);
+    const key = turnsLeft + JSON.stringify(r.S); if (ctx.memo && ctx.memo.has(key)) return ctx.memo.get(key);
+    const v = puzzleForced(r.S, [], turnsLeft - 1, z, ctx); if (ctx.memo && !ctx.cut) ctx.memo.set(key, v); return v;
+  }
+  const mine = r.req.p === 0;
+  for (let i = 0; i < r.req.opts.length; i++) {
+    if (mine && ctx.ban && ctx.ban(r.req.opts[i], r.S, r.req)) continue;
+    const w = puzzleForced(snap, decs.concat(i), turnsLeft, z, ctx); if (mine && w) return true; if (!mine && !w) return false;
+  }
   return !mine;
 }
-/* The puzzle opponent, on its own turn: any choice that still lets it survive the turn, if there is one. */
-function puzzleReply(G, me) {
-  const q = G.req, own = G.S.cur !== me;
-  for (let i = 0; i < q.opts.length; i++) { const ctx = {n: 20000}; if (!forcedWin(G.snap, G.decs.concat(i), me, ctx, own ? 1 : 2) && !ctx.cut) return i; }
-  return 0;
+const puzzleTurnsLeft = (z, S) => puzzleTurns(z) - (S.turn - z.turn);
+/* The puzzle opponent: a choice that stops you, if there is one. */
+function puzzleReply(G, z, memo) {
+  const q = G.req, left = puzzleTurnsLeft(z, G.S);
+  for (let i = 0; i < q.opts.length; i++) { const ctx = {n: 150000, memo}; if (!puzzleForced(G.snap, G.decs.concat(i), left, z, ctx) && !ctx.cut) return i; }
+  return aiChoose(G, 'hard');   // nothing stops you: play sensibly anyway
+}
+/* For you: a choice that keeps the puzzle solvable (used by the tests), or -1. */
+function puzzleHint(G, z, memo) {
+  const q = G.req, left = puzzleTurnsLeft(z, G.S);
+  for (let i = 0; i < q.opts.length; i++) if (puzzleForced(G.snap, G.decs.concat(i), left, z, {n: 150000, memo})) return i;
+  return -1;
 }
