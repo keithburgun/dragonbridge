@@ -199,16 +199,27 @@ function* bump(S, p, n, o = {}) {
   const from = S.pos[t], base = Math.max(0, n + S.t.bumpB);
   const dirs = [-1, 1].filter(d => (!o.dir || d === o.dir) && (!o.away || isAway(from, d)));
   if (!dirs.length) return {moved: 0};
-  const toDragon = d => (d < 0) === (S.dragon === 0);
-  const dc = yield* ask(S, p, 'dir', `Bump ${t === p ? 'yourself' : nm(S, t)} ${base}: which way?`, dirs.map(d => ({dir: d, tile: clampT(from + d * base), label: toDragon(d) ? 'Toward the Dragon' : 'Toward the Exit'})), {who: t, verb: 'bump'});
-  const dir = dc.dir, aw = isAway(from, dir);
   const eve = isW(S, p, 'eve') && !e2(S) && !S.away[p] && tileColor(S.pos[p]) === 'P';
+  // One choice: the tile the target lands on. Each direction offers the plain Bump, the Bump with your bonuses
+  // (all of them or none), and, with Ruupart's Blade, either of those with the Blade's extra +4.
+  const who = t === p ? 'yourself' : nm(S, t), opts = [], seen = {};
+  for (const d of dirs) {
+    const aw = isAway(from, d);
+    const bonus = (eve ? 2 : 0) + (isW(S, p, 'may2') && S.t.phase === 'action' && aw ? 2 : 0) + (S.power === 'charge' && aw ? 1 : 0) + (S.power === 'hop' ? S.items[1 - p].length : 0)
+      + (has(S, p, 'blade') && aw ? 1 : 0) + (has(S, p, 'cutlass') && !e2(S) && aw ? 1 : 0);
+    const tries = [[base, 0, 0]]; if (bonus > 0) tries.push([base + bonus, 1, 0]);
+    if (has(S, p, 'blade') && aw) { tries.push([base + 4, 0, 1]); if (bonus > 0) tries.push([base + bonus + 4, 1, 1]); }
+    for (const [total, useBonus, blade] of tries.sort((a, b) => a[2] - b[2] || a[0] - b[0])) {
+      const dest = from + d * total, over = dest < 0 || dest > LAST, tile = clampT(dest), key = tile + (over ? '!' : '');
+      if (seen[key]) continue;   // same landing spot: keep the cheapest way there
+      seen[key] = 1;
+      opts.push({tile, dir: d, total, blade, over, tl: over ? total + ' · off the end' : String(total), label: `Bump ${total} to ${tileName(tile)}${over ? ', past the end' : ''}${blade ? ' (reshuffle Ruupart’s Blade)' : ''}`});
+    }
+  }
+  const dc = yield* ask(S, p, 'tile', `Bump ${who} ${base}: choose where ${t === p ? 'you land' : nm(S, t) + ' lands'}`, opts, {who: t, verb: 'bump'});
+  const dir = dc.dir, total = dc.total;
   if (eve && S.ready[1 - p] > S.ready[p]) ready(S, p, 1);
-  let bonus = (eve ? 2 : 0) + (isW(S, p, 'may2') && S.t.phase === 'action' && aw ? 2 : 0) + (S.power === 'charge' && aw ? 1 : 0) + (S.power === 'hop' ? S.items[1 - p].length : 0)
-    + (has(S, p, 'blade') && aw ? 1 : 0) + (has(S, p, 'cutlass') && !e2(S) && aw ? 1 : 0);
-  let total = base;
-  if (bonus > 0 && (yield* yn(S, p, `Add your +${bonus} Bump bonus? (Bump ${base + bonus} instead of ${base})`, `Bump ${base + bonus}`))) total += bonus;
-  if (has(S, p, 'blade') && aw && (yield* yn(S, p, 'Reshuffle Ruupart’s Blade for +4 more Bump?', `Bump ${total + 4}`))) { dropItem(S, p, 'blade'); total += 4; }
+  if (dc.blade) dropItem(S, p, 'blade');
   const dest = from + dir * total, over = dest < 0 || dest > LAST;
   S.pos[t] = clampT(dest);
   log(S, `${nm(S, p)} bumps ${t === p ? 'themself' : nm(S, t)} ${total} to ${tileName(S.pos[t])}${over ? ', past the end of the bridge' : ''}.`);

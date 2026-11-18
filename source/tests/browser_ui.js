@@ -8,7 +8,7 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   const shot = async n => { if (dir) await p.screenshot({path: path.join(dir, `ui_${n}.png`)}); };
   await p.goto('file://' + path.resolve(__dirname, '../dist/dragonbridge.html')); await p.waitForTimeout(400);
-  await p.evaluate(() => { P.opt.speed = 0; startMatch({mode: 'versus', wiz: ['derby', 'eve'], level: 'easy', seed: 11, first: 0}); });
+  await p.evaluate(() => { P.opt.speed = 0; window.TEST_FAST = true; startMatch({mode: 'versus', wiz: ['derby', 'eve'], level: 'easy', seed: 11, first: 0}); });
   const mine = () => p.waitForFunction(() => M.G.over || !M.busy && M.G.req && M.G.req.p === 0);
   await mine();
   ok(await p.isVisible('#logpane'), 'log pane visible on desktop'); ok(!(await p.isVisible('#mebar [data-a="log"]')), 'Log button hidden on desktop');
@@ -39,6 +39,12 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   await p.evaluate(() => startMatch({mode: 'versus', wiz: ['derby', 'eve'], level: 'easy', seed: 11, first: 0})); await mine();
   await p.evaluate(() => { const i = M.G.req.opts.findIndex(o => o.card && ACTIONS[o.card].move); if (i >= 0) answer(i); });
   if (await p.evaluate(() => M.G.req && M.G.req.kind === 'tile')) { ok(await p.locator('#bridge .tile.can.mv').count() > 1, 'move tiles use the blue highlight'); await shot('move'); }
+  // a Bump is chosen by clicking the tile the target lands on (gold tiles, no direction buttons)
+  await p.evaluate(() => { const snap = clone(M.G.snap), all = snap.deck.concat(snap.hand[0]); all.splice(all.indexOf('gale'), 1); snap.hand[0] = ['gale'].concat(all.splice(0, 3)); snap.deck = all; snap.pos = [9, 11]; M.G = Game.resume(snap, [], []); M.hist = []; render(); answer(M.G.req.opts.findIndex(o => o.card === 'gale')); });
+  ok(await p.evaluate(() => M.G.req.verb === 'bump' && M.G.req.kind === 'tile'), 'bump asks for a landing tile');
+  ok(await p.locator('#bridge .tile.can:not(.mv)').count() === 2 && await p.locator('#opts [data-a="ans"]').count() === 0, 'two gold landing tiles and no buttons');
+  await shot('bump'); await p.locator('#bridge .tile.can').last().click({force: true}); await p.waitForTimeout(60);
+  ok(await p.evaluate(() => M.G.S.pos[1] === 13), 'clicking the tile bumps the opponent there');
   // Gem Phase is skipped when nothing can be done
   const skipped = await p.evaluate(() => { const S = newState({wiz: ['derby', 'eve'], seed: 3, first: 0}); S.ready = [0, 0]; S.hand[0] = ['transfer', 'soda', 'bait', 'insight']; S.log = []; const G = new Game(S); G.answer(G.req.opts.findIndex(o => o.card === 'bait')); let sawGem = false; while (G.req && G.S.turn === 1) { if (G.req.kind === 'gem') sawGem = true; G.answer(0); } return !sawGem; });
   ok(skipped, 'Gem Phase skipped with no Gem Action available');

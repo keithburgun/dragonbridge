@@ -13,7 +13,7 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   ok(Math.abs(r.w / r.h - 9 / 19.5) < 0.01 && r.h === 800 && r.x > 300, 'Mobile View is a centred phone-shaped column: ' + JSON.stringify(r));
   ok(await p.evaluate(() => { const o = document.querySelector('#ov').getBoundingClientRect(), a = document.querySelector('#app').getBoundingClientRect(); return Math.abs(o.width - a.width) < 2 && Math.abs(o.left - a.left) < 2; }), 'sheets stay inside the frame');
   await p.keyboard.press('Escape'); await shot('title');
-  await p.evaluate(() => { P.opt.speed = 0; startMatch({mode: 'versus', wiz: ['derby', 'gelf'], level: 'easy', seed: 21, first: 0}); });
+  await p.evaluate(() => { P.opt.speed = 0; window.TEST_FAST = true; startMatch({mode: 'versus', wiz: ['derby', 'gelf'], level: 'easy', seed: 21, first: 0}); });
   const mine = () => p.waitForFunction(() => M.G.over || !M.busy && M.G.req && M.G.req.p === 0);
   await mine(); await shot('match');
   ok(!(await p.isVisible('#logpane')), 'no side log in Mobile View'); ok(await p.isVisible('#mebar [data-a="log"]'), 'Log button back in Mobile View');

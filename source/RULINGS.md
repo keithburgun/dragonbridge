@@ -15,7 +15,7 @@ Where a card or the manual leaves room, the game does the following. Change any 
 
 **Costs and bonuses**
 - "Deplete a Gem to …" on Fireball, Leap and Checkmate is optional.
-- Bump bonuses from Items, Wizards and Dragon Powers are offered as one yes/no ("Bump 4 instead of 2"); Ruupart's Blade's extra +4 is asked separately. Abragail's and December's turn-long Bump changes are always applied.
+- A Bump is chosen by picking the tile the target lands on. Each direction offers the plain Bump and the Bump with all your optional bonuses from Items, Wizards and Dragon Powers; with Ruupart's Blade, also each of those with its extra +4. Turn-long Bump changes (Abragail, December, 2nd Edition Eve) are always applied.
 - "Away from center" is judged from where the bumped Wizard stands when the Bump starts.
 - Gale: the optional Teleport goes the way the opponent was actually pushed.
 - Step goes to the Nest before the extra card is played, so the extra card is the "last card played".

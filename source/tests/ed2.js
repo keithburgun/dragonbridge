@@ -16,7 +16,7 @@ pick(G, o => o.card === 'dart'); assert(/Bump Derby 3/.test(G.req.prompt), G.req
 G = setup(['eve', 'derby'], ['dart', 'hop', 'soda', 'step'], {pre: S => { S.pos[0] = 9; S.pos[1] = 11; }});
 pick(G, o => o.card === 'dart'); assert(/Bump Derby 1/.test(G.req.prompt), G.req.prompt);
 G = setup(['eve', 'derby'], ['dart', 'hop', 'soda', 'step'], {ed: 1, pre: S => { S.pos[0] = 11; S.pos[1] = 9; }});
-pick(G, o => o.card === 'dart'); assert(/Bump Derby 1/.test(G.req.prompt)); pick(G, o => o.dir === 1); assert(/\+2 Bump bonus/.test(G.req.prompt), '1E Eve keeps her optional +2');
+pick(G, o => o.card === 'dart'); assert(/Bump Derby 1/.test(G.req.prompt)); assert.deepEqual(G.req.opts.filter(o => o.dir === 1).map(o => o.total), [1, 3], '1E Eve keeps her optional +2');
 // Abragail: 2 or 3 ready Gems (not 1)
 G = setup(['abragail', 'derby'], ['hop', 'soda', 'step', 'bait'], {pre: S => { S.ready[0] = 2; }}); pick(G, o => o.card === 'hop'); assert(/Move up to 4/.test(G.req.prompt), G.req.prompt);
 G = setup(['abragail', 'derby'], ['hop', 'soda', 'step', 'bait']); pick(G, o => o.card === 'hop'); assert(/Move up to 3/.test(G.req.prompt), G.req.prompt);
@@ -29,7 +29,7 @@ assert(/Abragail/.test(G.req.prompt) && !has(G, o => o.id === 'gem'), G.req.prom
 G = setup(['derby', 'gelf'], ['hop', 'soda', 'step', 'bait'], {pre: S => give(S, 0, 'skates')}); pick(G, o => o.card === 'hop'); assert(/Move up to 4$/.test(G.req.prompt), G.req.prompt);
 assert.equal(G.req.opts.length, 9);
 // Accursed Loom: its Bump gains no White Gem
-G = setup(['derby', 'gelf'], ['hop', 'soda', 'step', 'bait'], {pre: S => give(S, 0, 'loom')}); S = G.S; pick(G, o => o.card === 'hop'); pick(G, o => o.label === 'Stay'); pick(G, o => o.id === 'yes'); pick(G, o => o.dir === 1);
+G = setup(['derby', 'gelf'], ['hop', 'soda', 'step', 'bait'], {pre: S => give(S, 0, 'loom')}); S = G.S; pick(G, o => o.card === 'hop'); pick(G, o => o.label === 'Stay'); pick(G, o => o.id === 'yes'); pick(G, o => o.dir === 1 && o.total === 1);
 assert.equal(S.white[0], 0);
 // Techno-Cutlass: no +1; landing on a Gem tile depletes and costs a White Gem
 G = setup(['derby', 'gelf'], ['dart', 'soda', 'step', 'bait'], {pre: S => { give(S, 0, 'cutlass'); S.white[1] = 2; S.supply = 6; S.pos[1] = 11; }}); S = G.S;

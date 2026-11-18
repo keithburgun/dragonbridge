@@ -245,7 +245,7 @@ function roar() {   // a synth dragon roar: two detuned low oscillators with a g
     lp.connect(out).connect(AC.destination); lfo.start(t); lfo.stop(t + d);
   } catch (e) {}
 }
-function steps(n, gap) { for (let i = 0; i < n; i++) setTimeout(() => { beep(i % 2 ? 96 : 118, .07, 'triangle', .16 * (1 - i / (n * 1.4)), -30); beep(900, .02, 'square', .015); }, i * gap); }   // footsteps fading into the distance
+function steps(n, gap) { for (let i = 0; i < n; i++) setTimeout(() => { const v = 1 - i / n; beep(i % 2 ? 96 : 118, .08, 'triangle', .2 * v, -30); beep(900, .02, 'square', .02 * v); }, i * gap); }   // footsteps fading into the distance
 const SFX = {card: () => beep(520, .08), move: () => beep(340, .12, 'sine', .08, 160), bump: () => beep(160, .16, 'square', .06, -70), gem: () => beep(880, .1, 'sine', .06, 220), flight: roar, win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .18), i * 120)), lose: () => [330, 262, 196].forEach((f, i) => setTimeout(() => beep(f, .25, 'sawtooth', .05), i * 160))};
 
 /* ---------- screens and overlays ---------- */
@@ -353,8 +353,7 @@ function render() {
   if (q) {
     const used = {};
     q.opts.forEach((o, i) => {
-      if (o.tile != null && q.kind !== 'dir') tiles[o.tile] = {i, label: o.label === 'Stay' ? 'Stay' : ''};
-      else if (q.kind === 'dir') { tiles[o.tile] = {i, label: o.label}; btns.push({i, label: (o.dir < 0 ? '← ' : '') + o.label + (o.dir > 0 ? ' →' : '')}); }
+      if (o.tile != null) { if (tiles[o.tile]) btns.push({i, label: o.label}); else tiles[o.tile] = {i, label: o.tl || (o.label === 'Stay' ? 'Stay' : '')}; }   // (two ways onto one tile: the second is a button)
       else if (o.card && o.zone === 'hand') { let k = -1; S.hand[HUMAN].forEach((c, j) => { if (k < 0 && c === o.card && !used[j]) k = j; }); if (k >= 0) { used[k] = 1; handPick[k] = i; } else strip.push({i, o}); }
       else if (o.card || o.item || o.hack) {
         strip.push({i, o});
@@ -369,7 +368,7 @@ function render() {
   let b = '';
   const dz = S.dragon === 0 ? 0 : 76.19;
   b += `<div class="zone threat" style="left:${dz}%">THREATENED</div><div class="zone exit" style="left:${76.19 - dz}%">EXIT</div>`;
-  for (let t = 0; t <= LAST; t++) { const c = tiles[t]; b += `<button class="tile${c ? ' can' + (q.kind === 'tile' ? ' mv' : '') : ''}" style="left:${t * 4.762}%" ${c ? `data-a="ans" data-i="${c.i}"` : 'tabindex="-1" disabled'} aria-label="${esc(tileName(t))}">${c && c.label ? `<span class="tl">${esc(c.label)}</span>` : ''}</button>`; }
+  for (let t = 0; t <= LAST; t++) { const c = tiles[t]; b += `<button class="tile${c ? ' can' + (q.verb === 'bump' ? '' : ' mv') : ''}" style="left:${t * 4.762}%" ${c ? `data-a="ans" data-i="${c.i}"` : 'tabindex="-1" disabled'} aria-label="${esc(tileName(t))}">${c && c.label ? `<span class="tl">${esc(c.label)}</span>` : ''}</button>`; }
   for (const p of [1, 0]) b += `<div class="tok ${p ? 'opp' : 'me'}${S.away[p] ? ' off' : ''}" data-a="tok" data-id="${S.wiz[p]}" data-peek="wz_${S.wiz[p]}" style="left:${(S.pos[p] + .5) * 4.762}%"><img src="${face(S.wiz[p])}" alt=""><span class="you">${p ? 'CPU' : 'YOU'}</span></div>`;
   const br = $('#bridge');
   if (!br.dataset.init) { br.style.backgroundImage = `url(${im('bridge')})`; br.dataset.init = 1; $('#dragon .dface img').src = face('dragon'); }
@@ -476,7 +475,8 @@ function resetStage() {   // undo whatever the last match's ending left on scree
 }
 /* The end of a match, played out before the result sheet: an escape walks off the far end; a pounce brings the Dragon down. */
 function drama(done) {
-  const S = M.G.S, M0 = M, sp = speed(), w = S.winner, l = 1 - w;
+  // Endings always play, whatever the CPU animation setting (at Instant they run at the Fast pace).
+  const S = M.G.S, M0 = M, sp = window.TEST_FAST ? 0 : Math.max(0.5, speed()), w = S.winner, l = 1 - w;
   if (!sp || w < 0 || (S.reason !== 'escape' && S.reason !== 'pounce')) return done();
   M.busy = true;
   const toks = [...$('#bridge').querySelectorAll('.tok')], tokOf = p => toks[p === 1 ? 0 : 1], T = (ms, f) => setTimeout(() => { if (M === M0) f(); }, ms * sp);
@@ -485,8 +485,9 @@ function drama(done) {
   const say = (a, c) => { clearTimeout(bannerT); b.className = 'on big'; b.innerHTML = `<div>${esc(a)}</div>` + (c ? `<div class="l2">${esc(c)}</div>` : ''); };
   const end = t0 => { T(t0, () => say(S.reason === 'escape' ? `${nW} ESCAPES!` : `${nL} was POUNCED!`)); T(t0 + 1200, () => { say(S.reason === 'escape' ? `${nW} ESCAPES!` : `${nL} was POUNCED!`, `${nW} WINS!`); (w === HUMAN ? SFX.win : SFX.lose)(); }); T(t0 + 3200, () => { b.className = ''; b.style.left = ''; M.busy = false; done(); }); };
   if (S.reason === 'escape') {
-    T(650, () => { const tk = tokOf(w); tk.style.transition = `left ${2.1 * sp}s linear, opacity ${2.1 * sp}s ease-in`; tk.style.left = (S.dragon === 0 ? 103 : -3) + '%'; tk.style.opacity = 0; steps(8, 250 * sp); });   // walks off the Exit end
-    end(2900);
+    // the Wizard fades away where they stand, slowly, to footsteps that die away with them
+    T(650, () => { const tk = tokOf(w); tk.style.transition = `opacity ${3 * sp}s linear`; tk.style.opacity = 0; steps(11, 280 * sp); });
+    end(3900);
   } else {
     T(650, () => {
       const fly = $('#dragon .dfly'), a = fly.querySelector('.dface').getBoundingClientRect(), v = tokOf(l).getBoundingClientRect();
@@ -508,19 +509,19 @@ function chooseCard(i) {   // a card-shaped option: zoom first so its text can b
 function tip() {
   const G = M.G; if (!G.req || G.req.p !== HUMAN || M.busy) return;
   const i = aiChoose(G, 'expert'), o = G.req.opts[i];
-  $('#ticker').textContent = 'Expert tip: ' + (o.tile != null && G.req.kind !== 'dir' ? (o.label === 'Stay' ? 'stay where you are' : 'go to ' + o.label) : o.label) + '.';
+  $('#ticker').textContent = 'Expert tip: ' + (o.tile != null && G.req.verb !== 'bump' ? (o.label === 'Stay' ? 'stay where you are' : 'go to ' + o.label) : o.label) + '.';
 }
 const COACH = {
   card: 'This is your <b>Action Phase</b>. Tap a card to read it, then play it. <b>MOVE</b> walks you up to that many tiles, <b>BUMP</b> shoves your opponent exactly that far, and <b>TELEPORT</b> is a move that can never win the game by itself.',
   tile: 'Tap a glowing tile. The red end is <b>Threatened</b> by the Dragon: finish your Gem Phase there and you’re pounced. The green end is the <b>Exit</b>: start a MOVE while standing on it and you escape.',
-  dir: 'A Bump goes one way for its full distance. Shove your opponent toward the Dragon, or away from the Exit.',
+  dir: 'A Bump goes one way for its full distance. Tap a gold tile to choose where your opponent lands: toward the Dragon, or away from the Exit. The number is how far they are pushed.',
   gem: 'Now the <b>Gem Phase</b>: one Gem Action. Flip a ready Green Gem to Teleport 2, ready a Gem if you stand on a Gem tile (tiles 5 and 8), spend 3 ready Gems on an Item, or pay White Gems for a Bridge Hack (you can also click those cards on the table). White Gems come from Bumping. If you have no Gem Action available, this phase is skipped.',
   nest: 'Played cards go to the <b>Dragon Nest</b>. At 9 Wings the Dragon takes <b>Flight</b> to the other end and the last card played becomes its power. At 7 cards without a Flight the Nest is reshuffled (a <b>Roost</b>).',
 };
 function coachFor(q) {
   if (!M.cfg.tutorial) return;
   M.coach = M.coach || {};
-  let k = q.kind === 'card' && q.main ? 'card' : q.kind === 'tile' ? 'tile' : q.kind === 'dir' ? 'dir' : q.kind === 'gem' ? 'gem' : null;
+  let k = q.kind === 'card' && q.main ? 'card' : q.kind === 'tile' ? (q.verb === 'bump' ? 'dir' : 'tile') : q.kind === 'gem' ? 'gem' : null;
   if (k === 'card' && M.coach.card && !M.coach.nest && M.G.S.nest.length >= 2) k = 'nest';
   if (!k || M.coach[k]) return; M.coach[k] = 1;
   const c = $('#coach'); c.innerHTML = `<p>${COACH[k]}</p><div style="text-align:right"><button class="btn sm pri" data-a="coachok">Got it</button></div>`; c.hidden = false;
@@ -541,7 +542,7 @@ function dailyStreak() { let n = 0; const d = new Date(); for (;;) { const k = d
 function finish() {
   const S = M.G.S, cfg = M.cfg, won = cfg.puzzle ? puzzleOk(cfg.puzzle, S) : S.winner === HUMAN, got = [];
   store.del('db_save');
-  if (!speed() || (S.reason !== 'escape' && S.reason !== 'pounce') || S.winner == null) (won ? SFX.win : SFX.lose)();
+  if (window.TEST_FAST || (S.reason !== 'escape' && S.reason !== 'pounce') || S.winner == null) (won ? SFX.win : SFX.lose)();   // (otherwise the ending played it)
   let extra = '', acts = '<button class="btn pri" data-a="again" autofocus>Play again</button>';
   if (cfg.puzzle) {
     if (won) { P.pz2[cfg.puzzle.id] = 1; if (PUZZLES.every(z => P.pz2[z.id])) grant('pz', got); }

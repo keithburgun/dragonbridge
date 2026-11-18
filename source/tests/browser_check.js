@@ -9,7 +9,7 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   const shot = async n => { if (dir) await p.screenshot({path: path.join(dir, `chk_${w}_${n}.png`)}); };
   await p.goto('file://' + path.resolve(__dirname, '../dist/dragonbridge.html')); await p.waitForTimeout(500);
-  const fast = () => p.evaluate(() => { P.opt.speed = 0; P.opt.oneTap = true; });
+  const fast = () => p.evaluate(() => { P.opt.speed = 0; window.TEST_FAST = true; P.opt.oneTap = true; });
   // plays the current match by clicking; pick(G) may return an option index to prefer
   async function playOut(pick, maxSteps = 900) {
     for (let s = 0; s < maxSteps; s++) {

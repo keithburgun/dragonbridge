@@ -34,9 +34,12 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   // ---- Escape ending
   await stage(['derby', 'gelf'], ['hop', 'soda', 'bait', 'step'], 'S.pos[0] = 17; S.pos[1] = 11;');
   await pick("o.card === 'hop'"); ok(await p.evaluate(() => M.G.over && M.G.S.reason === 'escape'), 'escape wins');
-  await p.waitForTimeout(900); const op = await p.evaluate(() => +getComputedStyle(document.querySelector('#bridge .tok.me')).opacity); ok(op < 0.95 && op > 0.05, 'the escaping Wizard is fading out: ' + op); await shot('escape1');
+  const left0 = await p.evaluate(() => document.querySelector('#bridge .tok.me').getBoundingClientRect().left);
+  await p.waitForTimeout(900); const op = await p.evaluate(() => +getComputedStyle(document.querySelector('#bridge .tok.me')).opacity); ok(op < 0.9 && op > 0.3, 'the escaping Wizard is fading out slowly: ' + op); await shot('escape1');
+  await p.waitForTimeout(500); const op2 = await p.evaluate(() => +getComputedStyle(document.querySelector('#bridge .tok.me')).opacity); ok(op2 < op - 0.15 && op2 > 0, 'and keeps fading: ' + op2);
+  ok(Math.abs(left0 - await p.evaluate(() => document.querySelector('#bridge .tok.me').getBoundingClientRect().left)) < 2, 'it fades where it stands');
   ok(!(await p.evaluate(() => document.querySelector('#ov').classList.contains('show'))), 'no result sheet during the ending');
-  await p.waitForTimeout(800); ok(await banner() === 'Derby ESCAPES!', 'first line: ' + await banner());
+  await p.waitForTimeout(750); ok(await p.evaluate(() => +getComputedStyle(document.querySelector('#bridge .tok.me')).opacity) < 0.02, 'until it is gone'); ok(await banner() === 'Derby ESCAPES!', 'first line: ' + await banner());
   await p.waitForTimeout(650); ok(await banner() === 'Derby ESCAPES! Derby WINS!', 'second line: ' + await banner()); await shot('escape2');
   await p.waitForSelector('#ov.show', {timeout: 4000}); ok(/^Derby ESCAPES!$/.test(await p.textContent('#sheet h2')) && /Derby WINS!/.test(await p.textContent('#sheet')), 'result sheet repeats it');
   // ---- Pounce ending (you end your Gem Phase on a Threatened tile)
@@ -50,6 +53,10 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   await p.waitForTimeout(350); ok(await banner() === 'Derby was POUNCED!', 'first line: ' + await banner());
   await p.waitForTimeout(650); ok(await banner() === 'Derby was POUNCED! Gelf WINS!', 'second line: ' + await banner()); await shot('pounce2');
   await p.waitForSelector('#ov.show', {timeout: 4000}); ok(/^Derby was POUNCED!$/.test(await p.textContent('#sheet h2')), 'result sheet');
+  // endings play even with CPU animation set to Instant
+  await stage(['derby', 'gelf'], ['hop', 'soda', 'bait', 'step'], 'S.pos[0] = 17; S.pos[1] = 11;'); await p.evaluate(() => { P.opt.speed = 0; });
+  await pick("o.card === 'hop'"); await p.waitForTimeout(1000); ok(!(await p.evaluate(() => document.querySelector('#ov').classList.contains('show'))) && await p.evaluate(() => { const o = +getComputedStyle(document.querySelector('#bridge .tok.me')).opacity; return o < 0.95 && o > 0.05; }), 'the ending also plays at Instant speed');
+  await p.waitForSelector('#ov.show', {timeout: 5000}); await p.evaluate(() => { P.opt.speed = 0.5; });
   // a new match starts clean
   await p.evaluate(() => startMatch({mode: 'versus', wiz: ['derby', 'gelf'], level: 'easy', seed: 4, first: 0}));
   ok(await p.evaluate(() => document.querySelector('#dragon .dfly').getAnimations().length === 0 && !document.querySelector('#bridge .tok.squash') && getComputedStyle(document.querySelector('#bridge .tok.me')).opacity === '1' && !document.querySelector('#banner').classList.contains('on')), 'the next match starts with a clean board');
