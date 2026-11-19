@@ -72,7 +72,8 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
   await p.evaluate(() => { puzzleGo(4); closeOv(); }); await playOut(() => M.G.req.opts.length - 1); await p.waitForTimeout(350); ok(/Not this time/.test(await p.textContent('#sheet h2', {timeout: 3000}).catch(() => '')), 'a multi-turn puzzle played badly is failed when its turns run out');
   await p.evaluate(() => toTitle());
   // tutorial shows the coach
-  await p.evaluate(() => toTitle()); await p.click('#title [data-a="tutorial"]'); await p.waitForTimeout(300); ok(await p.isVisible('#coach'), 'tutorial coach'); await shot('tutorial');
+  await p.evaluate(() => toTitle()); await p.click('#title [data-a="tutorial"]'); await p.waitForTimeout(300); ok(await p.isVisible('#coach') && /^Welcome to Dragon Bridge! This short tutorial will teach you the basics of how to play this wizard-bumping card game\.Got it$/.test((await p.textContent('#coach')).trim()), 'tutorial opens with the welcome: ' + await p.textContent('#coach')); await shot('tutorial');
+  await p.click('[data-a="coachok"]'); ok(await p.isVisible('#coach') && /Action Phase/.test(await p.textContent('#coach')), 'then the first lesson');
   await p.click('#title [data-a="stats"]', {force: true}).catch(() => {});
   await p.evaluate(() => { toTitle(); statsSheet(); }); await shot('stats');
   console.log(`${w}x${h}: ${fails.length} fails, ${errs.length} page errors`, fails.slice(0, 8), errs.slice(0, 5));

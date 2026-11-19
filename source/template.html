@@ -539,6 +539,7 @@ function tip() {
   $('#ticker').textContent = 'Expert tip: ' + (o.tile != null && G.req.verb !== 'bump' ? (o.label === 'Stay' ? 'stay where you are' : 'go to ' + o.label) : o.label) + '.';
 }
 const COACH = {
+  welcome: 'Welcome to Dragon Bridge! This short tutorial will teach you the basics of how to play this wizard-bumping card game.',
   card: 'This is your <b>Action Phase</b>. Tap a card to read it, then play it. <b>MOVE</b> walks you up to that many tiles, <b>BUMP</b> shoves your opponent exactly that far, and <b>TELEPORT</b> is a move that can never win the game by itself.',
   tile: 'Tap a glowing tile. The red end is <b>Threatened</b> by the Dragon: finish your Gem Phase there and you’re pounced. The green end is the <b>Exit</b>: start a MOVE while standing on it and you escape.',
   dir: 'A Bump goes one way for its full distance. Tap a gold tile to choose where your opponent lands: toward the Dragon, or away from the Exit. The number is how far they are pushed.',
@@ -550,6 +551,7 @@ function coachFor(q) {
   M.coach = M.coach || {};
   let k = q.kind === 'card' && q.main ? 'card' : q.kind === 'tile' ? (q.verb === 'bump' ? 'dir' : 'tile') : q.kind === 'gem' ? 'gem' : null;
   if (k === 'card' && M.coach.card && !M.coach.nest && M.G.S.nest.length >= 2) k = 'nest';
+  if (!M.coach.welcome) k = 'welcome';   // the very first box; "Got it" then brings up the one for the choice at hand
   if (!k || M.coach[k]) return; M.coach[k] = 1;
   const c = $('#coach'); c.innerHTML = `<p>${COACH[k]}</p><div style="text-align:right"><button class="btn sm pri" data-a="coachok">Got it</button></div>`; c.hidden = false;
 }
@@ -774,7 +776,7 @@ document.addEventListener('click', ev => {
     case 'undo': undo(); break;
     case 'log': logSheet(); break;
     case 'menu': menuSheet(); break;
-    case 'coachok': $('#coach').hidden = true; break;
+    case 'coachok': $('#coach').hidden = true; if (M && M.G.req && M.G.req.p === HUMAN) coachFor(M.G.req); break;
     case 'resign': openOv('<h2>Resign this match?</h2><p>It counts as a loss.</p><div class="acts"><button class="btn" data-a="resign2">Resign</button><button class="btn pri" data-a="close" autofocus>Keep playing</button></div>'); break;
     case 'resign2': M.G.S.winner = 1; M.G.S.reason = 'resign'; M.G.req = null; closeOv(); render(); finish(); break;
     case 'wipe1': openOv(`<h2>Erase all progress?</h2><p>This permanently erases your stats, achievements, ranks, trophies and any match in progress ${SYNC.S.on && SYNC.S.ses ? 'on this device and in your account' : 'in this browser'}.</p><div class="acts"><button class="btn" data-a="wipe2">Erase everything</button><button class="btn pri" data-a="close" autofocus>Cancel</button></div>`); break;
