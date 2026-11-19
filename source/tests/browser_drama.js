@@ -59,6 +59,21 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   await p.waitForSelector('#ov.show', {timeout: 5000}); await p.evaluate(() => { P.opt.speed = 0.5; });
   // a new match starts clean
   await p.evaluate(() => startMatch({mode: 'versus', wiz: ['derby', 'gelf'], level: 'easy', seed: 4, first: 0}));
+  ok(await p.evaluate(() => { const f = document.querySelector('#dragon .dface').getBoundingClientRect(), br = document.querySelector('#bridge').getBoundingClientRect(); return f.right <= br.left + 1 && document.querySelector('#dragon').getAnimations({subtree: true}).length === 0; }), 'after a pounce the Dragon is back beside the bridge, not on it');
+  ok(await p.evaluate(() => getComputedStyle(document.querySelector('.zone.threat')).boxShadow === 'none' && /rgba\(0, 0, 0, 0\)|transparent/.test(getComputedStyle(document.querySelector('.zone.threat')).backgroundColor) && getComputedStyle(document.querySelector('.zone.threat')).backgroundImage === 'none'), 'no red box on the Threatened tiles');
+  // ---- moves and bumps slide at Normal speed, also on a device set to reduce motion
+  const p2 = await b.newPage({viewport: {width: 1280, height: 800}, reducedMotion: 'reduce'}); p2.on('pageerror', e => errs.push(e.message));
+  await p2.goto('file://' + path.resolve(__dirname, '../dist/dragonbridge.html')); await p2.waitForTimeout(400);
+  await p2.evaluate(() => {
+    P.opt.speed = 1; P.opt.oneTap = true; P.opt.sound = false; startMatch({mode: 'versus', wiz: ['derby', 'gelf'], level: 'easy', seed: 4, first: 0});
+    const snap = clone(M.G.snap), hand = ['hop', 'gale', 'bait', 'soda'], all = snap.deck.concat(snap.hand[0]); for (const c of hand) all.splice(all.indexOf(c), 1); snap.hand[0] = hand; snap.deck = all; snap.pos = [9, 12];
+    M.G = Game.resume(snap, [], []); M.fresh = true; resetStage(); render();
+  });
+  const pick2 = f => p2.evaluate(f => answer(M.G.req.opts.findIndex(new Function('o', 'return ' + f))), f), xOf = c => p2.evaluate(c => document.querySelector('#bridge .tok.' + c).getBoundingClientRect().left, c);
+  await pick2("o.card === 'gale'"); const o0 = await xOf('opp'); ok(await p2.evaluate(() => M.G.req.verb === 'bump'), 'a bump asks for a tile');
+  await p2.evaluate(() => answer(M.G.req.opts.findIndex(o => o.tile > 12))); await p2.waitForTimeout(200); const o1 = await xOf('opp'); await p2.waitForTimeout(700); const o2 = await xOf('opp');
+  ok(o1 > o0 + 2 && o1 < o2 - 2 && o2 > o0 + 40, `a bumped Wizard slides (${Math.round(o0)} → ${Math.round(o1)} → ${Math.round(o2)})`);
+  await p2.close();
   ok(await p.evaluate(() => document.querySelector('#dragon .dfly').getAnimations().length === 0 && !document.querySelector('#bridge .tok.squash') && getComputedStyle(document.querySelector('#bridge .tok.me')).opacity === '1' && !document.querySelector('#banner').classList.contains('on')), 'the next match starts with a clean board');
   console.log(`drama: ${fails.length} fails, ${errs.length} page errors`, fails, errs.slice(0, 4)); await b.close(); process.exit(fails.length || errs.length ? 1 : 0);
 })();

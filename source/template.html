@@ -86,7 +86,7 @@ body.mview{background:var(--out)}
 #bridgewrap{position:relative;flex:none;padding-inline:calc(var(--dw) + 6px);margin-block:2px}
 #bridge{position:relative;aspect-ratio:1890/426;background-size:100% 100%;border-radius:8px;box-shadow:0 6px 18px #000a}
 .zone{position:absolute;top:0;bottom:0;width:23.81%;pointer-events:none;display:flex;align-items:flex-end;justify-content:center;font:800 clamp(.5rem,1.3cqw,.8rem)/1 var(--body);letter-spacing:.12em;padding-bottom:2px;transition:left .9s}
-.zone.threat{background:linear-gradient(#ff000055,#ff000022);color:#fff;box-shadow:inset 0 0 0 2px #ff3b3b;text-shadow:0 1px 2px #000}
+.zone.threat{color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000}
 .zone.exit{color:#eafff0;text-shadow:0 1px 3px #000,0 0 6px #000}
 .tile{position:absolute;top:0;bottom:0;width:4.762%;border:0;background:none;padding:0}
 .tile.can{cursor:pointer;background:#ffffff26;box-shadow:inset 0 0 0 3px var(--gold);animation:pulse 1.1s infinite alternate}
@@ -172,7 +172,6 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
   #app > *{--card:22.5cqw;--mini:10.2cqw;--tok:6.2cqw;--dw:11cqw} #hand{gap:3px}
 }
 @container app (max-height:560px){#app > *{--card:clamp(64px,19cqh,120px);--mini:clamp(30px,8.5cqh,56px)} #prompt{min-height:40px}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
 <div id="app">
@@ -497,8 +496,9 @@ function arcFrames(x0, y0, x1, y1, lift, grow = 1.2) {
   return f;
 }
 function resetStage() {   // undo whatever the last match's ending left on screen
-  const fly = $('#dragon .dfly'); if (fly.getAnimations) fly.getAnimations().forEach(a => a.cancel());
-  const br = $('#bridge'); br.dataset.w = ''; br.classList.remove('shake'); $('#dragon').style.zIndex = '';
+  const dg = $('#dragon'); if (dg.getAnimations) dg.getAnimations({subtree: true}).forEach(a => a.cancel());   // a pounce leaves the Dragon's face on its victim
+  dg.style.zIndex = ''; dg.style.pointerEvents = ''; dg.classList.remove('flying');
+  const br = $('#bridge'); br.dataset.w = ''; br.classList.remove('shake');
   clearTimeout(bannerT); const b = $('#banner'); b.className = ''; b.textContent = ''; b.style.left = '';
 }
 /* The end of a match, played out before the result sheet: an escape walks off the far end; a pounce brings the Dragon down. */
