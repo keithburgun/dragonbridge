@@ -31,9 +31,7 @@ body.mview{background:var(--out)}
 .lbl{color:var(--dim);font-size:.85rem}
 /* title */
 #title{align-items:center;justify-content:center;gap:14px;text-align:center}
-#title .logo{width:min(20cqw,84px);margin-bottom:-6px;aspect-ratio:1;border-radius:50%;box-shadow:0 8px 24px #0009}
 #title h1{margin:0;line-height:0}
-@container (max-height:700px){#title .logo{display:none} #title{gap:10px}}   /* short windows: the wordmark alone */
 #title h1 img{display:block;width:min(88cqw,500px);max-height:32cqh;object-fit:contain;filter:drop-shadow(0 6px 16px #0008)}
 .tmenu{display:flex;flex-direction:column;gap:8px;width:min(100%,300px)}
 .tbtn{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.7em;font-weight:600;font-size:1.05rem}
@@ -178,7 +176,6 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
 
 <div id="app">
   <section class="screen" id="title">
-    <img class="logo" id="tlogo" alt="">
     <h1><img id="twords" alt="Dragon Bridge"></h1>
     <p class="lbl" style="margin:0">Escape the bridge, or push your rival into the Dragon.</p>
     <nav class="tmenu" aria-label="Main menu">
@@ -1055,7 +1052,7 @@ loadProf();
 if (P.opt.opp === P.opt.wiz) P.opt.opp = 'random';
 function applyView() { document.body.classList.toggle('mview', !!P.opt.mview); hidePeek(); }
 applyView();
-$('#tlogo').src = im('logo'); $('#twords').src = im('title_logo');
+$('#twords').src = im('title_logo');
 document.documentElement.style.setProperty('--bgimg', `url(${IMG.bg})`);
 try { if (typeof APP_VERSION === 'string') $('#ver').textContent = '· ' + APP_VERSION; } catch (e) {}
 toTitle();
