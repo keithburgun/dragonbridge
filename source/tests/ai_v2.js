@@ -10,8 +10,10 @@ const LEVELS = {
   easy:   {sample: 10, blunder: 0.3, noise: 14},
   normal: {own: 250,  top: 0,  dets: 0, opp: 0,   blunder: 0.05, noise: 5},
   hard:   {own: 900,  top: 5,  dets: 2, opp: 220, blunder: 0,    noise: 0},
-  expert: {own: 3000, top: 10, dets: 4, opp: 700, blunder: 0,    noise: 0},
+  expert: {own: 2000, top: 8,  dets: 3, opp: 500, blunder: 0,    noise: 0},
 };
+// (frozen copy of the CPU as of v1.0.10, the baseline for tests/arena.js; AIY defines a level "y" in it for experiments)
+if (typeof process !== 'undefined' && process.env && process.env.AIY) { const j = JSON.parse(process.env.AIY); LEVELS.y = Object.assign({}, LEVELS[j.base || 'hard'], j); }
 /* How far player p could get themself in one turn: best Action card plus a Gem teleport. Used to spot a Wizard who
    cannot get out of the Threatened tiles. Generous on purpose (it ignores Hacks and Items that add more). */
 function selfReach(S, p) {
@@ -39,19 +41,35 @@ function canEscapeNow(S, p) {   // p is about to take a turn: is a win there for
   return mv && h.includes('step') && !S.gelf[1 - p] && d + Math.max(0, 1 + tpBonus(S, p)) >= 16;
 }
 function trapped(S, p) { if (S.away[p]) return false; const d = dragDist(S, p); return d <= 4 && selfReach(S, p) < 5 - d; }
+/* Evaluation weights. A level can override any of them with `w: {...}` (used to A/B-test changes). */
+const W0 = {gem: 4, own: 1.5, item: 9, white: 1, card: 0.8, tile: 2.6, exit: 26, exitMove: 40, threat: 28, deep: 8, near: 3, flight: 1, move: 0, bumpc: 0};
+let EW = W0;
+function tileVal(d, hasMove) {   // d: 0 = beside the Dragon ... 20 = the far (Exit) end
+  if (d <= 4) return -(EW.threat + EW.deep * (5 - d));
+  if (d >= 16) return EW.exit + (hasMove ? EW.exitMove : 0);
+  return (d - 10) * EW.tile - (d <= 7 ? (8 - d) * EW.near : 0);
+}
+function flightSoon(S) {   // rough chance that the Dragon changes ends within a turn or so
+  const gap = flightNeed(S) - wings(S); let p = gap <= 1 ? 0.6 : gap <= 3 ? 0.35 : gap <= 5 ? 0.15 : 0.05;
+  if (S.nest.length >= 6 && gap > 3) p *= 0.3;   // a Roost will empty the Nest first
+  return p;
+}
 function posVal(S, p) {
   if (S.away[p]) return 5;
-  const d = dragDist(S, p);
-  if (d <= 4) return -(28 + 8 * (5 - d));
-  if (d >= 16) return 26 + (S.hand[p].some(c => ACTIONS[c].move) ? 40 : 0);
-  return (d - 10) * 2.6 - (d <= 7 ? (8 - d) * 3 : 0);
+  const d = dragDist(S, p), mv = S.hand[p].some(c => ACTIONS[c].move);
+  let v = tileVal(d, mv);
+  if (EW.flight) { const pf = EW.flight * flightSoon(S); v = (1 - pf) * v + pf * tileVal(LAST - d, mv); }
+  if (EW.move || EW.bumpc) for (const c of S.hand[p]) v += (ACTIONS[c].move ? EW.move : 0) + (ACTIONS[c].bump ? EW.bumpc : 0);
+  return v;
 }
 /* Scored at a turn boundary, from `me`'s side. S.cur is the player about to move. */
 function evalS(S, me) {
-  if (S.winner != null) return S.winner === me ? 1e6 - S.turn : S.winner === 1 - me ? -1e6 + S.turn : 0;
+  // Won or lost: sooner wins and later losses are better, and between equal ones the CPU still prefers to stand
+  // further from the Dragon with more Gems, so that even a doomed Wizard doesn't walk toward it.
+  if (S.winner != null) return S.winner === me ? 1e6 - 100 * S.turn : S.winner === 1 - me ? -1e6 + 100 * S.turn + (S.away[me] ? 0 : 20 * dragDist(S, me)) + 5 * S.ready[me] : 0;
   const o = 1 - me, m = S.cur;
-  let v = 4 * (S.ready[me] - S.ready[o]) + 1.5 * (S.gems[me] + S.aside[me] - S.gems[o] - S.aside[o]) + 9 * (S.items[me].length - S.items[o].length)
-    + (S.white[me] - S.white[o]) + 0.8 * (S.hand[me].length - S.hand[o].length) + posVal(S, me) - posVal(S, o);
+  let v = EW.gem * (S.ready[me] - S.ready[o]) + EW.own * (S.gems[me] + S.aside[me] - S.gems[o] - S.aside[o]) + EW.item * (S.items[me].length - S.items[o].length)
+    + EW.white * (S.white[me] - S.white[o]) + EW.card * (S.hand[me].length - S.hand[o].length) + posVal(S, me) - posVal(S, o);
   if (canEscapeNow(S, m)) v += m === me ? 4e5 : -4e5;
   else if (trapped(S, m)) v += m === me ? -4e5 : 4e5;
   return v;
@@ -84,7 +102,12 @@ function sampleChoose(G, L) {   // Easy
 function aiChoose(G, level) {
   const q = G.req, me = q.p, n = q.opts.length, L = LEVELS[level] || LEVELS.normal;
   if (n === 1) return 0;
-  if (Math.random() < L.blunder) return randPolicy(q);
+  if (Math.random() < L.blunder) {   // a careless pick, but never a step of its own toward the Dragon's Threatened tiles
+    const S = G.S, d = t => S.dragon === 0 ? t : LAST - t, here = S.away[me] ? 99 : dragDist(S, me);
+    const sane = q.opts.map((o, i) => i).filter(i => { const o = q.opts[i]; return !(o.tile != null && q.who === me && d(o.tile) <= 4 && d(o.tile) < here); });
+    return sane.length ? sane[Math.floor(Math.random() * sane.length)] : randPolicy(q);
+  }
+  EW = L.w ? Object.assign({}, W0, L.w) : W0;
   if (L.sample) return sampleChoose(G, L);
   // still following the line worked out earlier this turn?
   const at = G.decs.length, pl = G._plan;
@@ -134,20 +157,46 @@ function probe(snap, decs, turns, det) {   // replay decs; stop at the next choi
     r = g.next(decs[i++]);
   }
 }
-/* Can `me` force a win within `turns` turns of the snapshot (default: before the end of the opponent's next turn),
-   whatever the opponent does? ctx = {n: node budget} */
-function forcedWin(snap, decs, me, ctx, turns = 2) {
+/* Puzzles. The human is player 0. z.goal = {type, n}:
+     escape  n   escape within n of your own turns                      (the puzzle runs 2n-1 turns)
+     defeat  n   the opponent is pounced by the end of their nth turn   (2n turns)
+     survive n   you have not lost after n of your turns and n of theirs (2n turns)
+   Winning any other way inside that time also counts. */
+const puzzleTurns = z => z.goal.type === 'escape' ? 2 * z.goal.n - 1 : 2 * z.goal.n;
+const puzzleOk = (z, S) => z.goal.type === 'survive' ? S.winner !== 1 : S.winner === 0;
+/* Can player 0 force success, whatever the opponent does? snap is a turn-start snapshot, decs the choices made so far
+   this turn, turnsLeft counts this turn. ctx = {n: node budget, memo: Map, ban?: (option, S) => true to forbid one of
+   player 0's options (used to check that a puzzle really needs its key move), opp?: (request, S) => index, a fixed
+   way for the opponent to play (if you cannot succeed even against that, you certainly cannot force it)}. */
+function puzzleForced(snap, decs, turnsLeft, z, ctx) {
   if (--ctx.n < 0) { ctx.cut = true; return false; }
-  const r = probe(snap, decs, turns);
-  if (r.S.winner === me) return true;
-  if (r.S.winner != null || !r.req) return false;
-  const mine = r.req.p === me;
-  for (let i = 0; i < r.req.opts.length; i++) { const w = forcedWin(snap, decs.concat(i), me, ctx, turns); if (mine && w) return true; if (!mine && !w) return false; }
+  const r = probe(snap, decs, 1);
+  if (r.S.winner != null) return puzzleOk(z, r.S);
+  if (!r.req) {   // the turn is over; r.S is the next turn's starting position
+    if (turnsLeft <= 1) return puzzleOk(z, r.S);
+    const key = turnsLeft + JSON.stringify(r.S); if (ctx.memo && ctx.memo.has(key)) return ctx.memo.get(key);
+    const v = puzzleForced(r.S, [], turnsLeft - 1, z, ctx); if (ctx.memo && !ctx.cut) ctx.memo.set(key, v); return v;
+  }
+  const mine = r.req.p === 0;
+  if (!mine && ctx.opp) return puzzleForced(snap, decs.concat(ctx.opp(r.req, r.S)), turnsLeft, z, ctx);
+  for (let i = 0; i < r.req.opts.length; i++) {
+    if (mine && ctx.ban && ctx.ban(r.req.opts[i], r.S, r.req)) continue;
+    const w = puzzleForced(snap, decs.concat(i), turnsLeft, z, ctx); if (mine && w) return true; if (!mine && !w) return false;
+  }
   return !mine;
 }
-/* The puzzle opponent, on its own turn: any choice that still lets it survive the turn, if there is one. */
-function puzzleReply(G, me) {
-  const q = G.req, own = G.S.cur !== me;
-  for (let i = 0; i < q.opts.length; i++) { const ctx = {n: 20000}; if (!forcedWin(G.snap, G.decs.concat(i), me, ctx, own ? 1 : 2) && !ctx.cut) return i; }
-  return 0;
+const puzzleTurnsLeft = (z, S) => puzzleTurns(z) - (S.turn - z.turn);
+/* The puzzle opponent: a choice that stops you, if there is one. */
+function puzzleReply(G, z, memo) {
+  const q = G.req, left = puzzleTurnsLeft(z, G.S);
+  // Look for a reply that stops you (a bounded search, so the game never stalls); otherwise play sensibly.
+  let budget = 40000;
+  for (let i = 0; i < q.opts.length && budget > 0; i++) { const ctx = {n: budget, memo}; const v = puzzleForced(G.snap, G.decs.concat(i), left, z, ctx); budget = ctx.n; if (!v && !ctx.cut) return i; }
+  return aiChoose(G, 'hard');
+}
+/* For you: a choice that keeps the puzzle solvable (used by the tests), or -1. */
+function puzzleHint(G, z, memo) {
+  const q = G.req, left = puzzleTurnsLeft(z, G.S);
+  for (let i = 0; i < q.opts.length; i++) if (puzzleForced(G.snap, G.decs.concat(i), left, z, {n: 3000000, memo})) return i;
+  return -1;
 }

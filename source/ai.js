@@ -2,8 +2,8 @@
 /* CPU players.
    The CPU never looks at hidden cards: before it thinks ahead, the cards it can't see (your hand, apart from cards
    it has been shown, and the deck) are reshuffled.
-   Normal and up look at every way to play out the rest of the turn (up to a budget) and score where each one
-   leaves them. Hard and Expert then take the most promising of those and work through the opponent's replies to
+   Normal and up look at every way to play out the rest of the turn (up to a budget, shared evenly between the
+   options so that no card goes unexamined) and score where each one leaves them. Hard and Expert then take the most promising of those and work through the opponent's replies to
    each, for several guesses at the opponent's hand, and pick the line whose worst case is best.
    Easy plays out a handful of random lines and sometimes just picks at random. */
 const LEVELS = {
@@ -12,6 +12,8 @@ const LEVELS = {
   hard:   {own: 900,  top: 5,  dets: 2, opp: 220, blunder: 0,    noise: 0},
   expert: {own: 2000, top: 8,  dets: 3, opp: 500, blunder: 0,    noise: 0},
 };
+// Experiments: AIX='{"base":"hard","w":{"tile":3}}' defines a level "x" (tests/arena.js x v2:hard 100).
+if (typeof process !== 'undefined' && process.env && process.env.AIX) { const j = JSON.parse(process.env.AIX); LEVELS.x = Object.assign({}, LEVELS[j.base || 'hard'], j); }
 /* How far player p could get themself in one turn: best Action card plus a Gem teleport. Used to spot a Wizard who
    cannot get out of the Threatened tiles. Generous on purpose (it ignores Hacks and Items that add more). */
 function selfReach(S, p) {
@@ -76,7 +78,8 @@ const randPolicy = q => Math.floor(Math.random() * q.opts.length);
 const sigOf = q => q.kind + '|' + q.p + '|' + q.opts.map(o => o.label).join('/');
 const stateKey = S => JSON.stringify([S.pos, S.ready, S.gems, S.aside, S.items, S.white, S.nest, S.power, S.dragon, S.hand, S.away, S.gelf, S.winner]);
 /* Every way the play can go from `decs` until `turns` turns have ended. `me` picks the best for itself, the other
-   player the worst for `me`. ctx.n is a node budget: once it is spent, each choice explores one random option.
+   player the worst for `me`. ctx.n is a node budget, shared out evenly between the options at every choice; where
+   it runs out, the line is played on with random picks.
    ctx.leaves (optional) collects every end position reached. Returns {v, decs, sigs}. */
 function searchTurn(snap, decs, me, det, turns, ctx, sigs) {
   const r = probe(snap, decs, turns, det);
@@ -84,8 +87,13 @@ function searchTurn(snap, decs, me, det, turns, ctx, sigs) {
   const q = r.req, mine = q.p === me, n = q.opts.length, s2 = sigs.concat(sigOf(q));
   let best = null;
   const tryOpt = i => { ctx.n--; const c = searchTurn(snap, decs.concat(i), me, det, turns, ctx, s2); if (!best || (mine ? c.v > best.v : c.v < best.v)) best = c; };
-  if (ctx.n <= 0) tryOpt(Math.floor(Math.random() * n));
-  else for (let i = 0; i < n; i++) { if (ctx.n <= 0 && best) break; tryOpt(i); if (ctx.stop && best && (mine ? best.v >= ctx.stop : false)) break; }
+  const won = () => best && (mine ? best.v >= 9e5 : best.v <= -9e5);   // a win is enough: stop looking
+  if (ctx.n <= 0) tryOpt(Math.floor(Math.random() * n));   // out of budget: play on along one line
+  else {   // share what is left of the budget evenly between the options, so that none goes unexamined
+    let left = ctx.n;
+    for (let i = 0; i < n && !won(); i++) { const share = Math.max(1, Math.floor(left / (n - i))); ctx.n = share; tryOpt(i); left -= share - ctx.n; }
+    ctx.n = left;
+  }
   return best;
 }
 function sampleChoose(G, L) {   // Easy
@@ -123,13 +131,14 @@ function aiChoose(G, level) {
     const seen = new Set(), cand = [];
     for (const lf of ctx.leaves.slice().sort((a, b) => b.v - a.v)) { const k = stateKey(lf.S); if (seen.has(k)) continue; seen.add(k); cand.push(lf); if (cand.length >= L.top * 3) break; }
     let done = 0, top = null;
+    const seeds = Array.from({length: L.dets}, () => Math.floor(Math.random() * 2 ** 31));   // the same guesses at the hidden cards for every candidate
     for (const lf of cand) {
       if (done >= L.top && !(top.v2 < -1e5 && done < L.top * 3)) break;
       done++;
       if (lf.S.winner != null) { lf.v2 = lf.v; } else {
         let sum = 0;
         for (let d = 0; d < L.dets; d++) {
-          const det2 = {me, pts: Object.assign({}, det.pts)}; det2.pts[lf.decs.length] = Math.floor(Math.random() * 2 ** 31);
+          const det2 = {me, pts: Object.assign({}, det.pts)}; det2.pts[lf.decs.length] = seeds[d];
           sum += searchTurn(G.snap, lf.decs, me, det2, 2, {n: L.opp}, []).v;
         }
         lf.v2 = 0.85 * sum / L.dets + 0.15 * Math.max(-1e4, Math.min(1e4, lf.v));

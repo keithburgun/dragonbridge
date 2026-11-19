@@ -89,7 +89,9 @@ The Android app and the Windows .exe ask GitHub for the latest release of this r
     node tests/fuzz.js 6                   # 1,350 random games across every Wizard pair; must not crash or lose a card
     node tests/ai_sense.js                 # a lost CPU still doesn't walk toward the Dragon
     node tests/ladder.js hard normal 30    # CPU ladder: the first level should win more
-    tests/arena_par.sh expert v1:expert 60 2   # current CPU vs the first-release CPU (tests/ai_v1.js), 120 games on 2 cores
+    tests/arena_par.sh expert v2:expert 300 2  # current CPU vs an earlier one (tests/ai_v2.js = v1.0.10, ai_v1.js = first release), 600 games on 2 cores
+    tests/exp.sh '{"base":"hard","dets":4}' 200   # A/B one change to a level's settings or evaluation weights against v2
+    node tests/tune.js 1500 1              # hill-climb the evaluation weights by fast one-ply self-play
     node tests/browser_check.js 1280 800   # plays every mode in a real browser (needs Playwright); also try 390 780
     node tests/ed2.js                      # each 2nd Edition card change
     node tests/browser_ed.js               # the 2nd Edition setting in a browser

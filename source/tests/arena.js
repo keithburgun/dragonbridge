@@ -1,6 +1,7 @@
 // CPU vs CPU, optionally with a different CPU file on one side:
 //   node tests/arena.js expert hard 40            current ai.js on both sides
-//   node tests/arena.js expert v1:expert 40       current ai.js vs tests/ai_v1.js (the first-release CPU)
+//   node tests/arena.js expert v2:expert 40       current ai.js vs tests/ai_v2.js (the CPU of v1.0.10; ai_v1.js is the first release)
+//   AIX='{"base":"hard","dets":4}' node tests/arena.js x v2:hard 40    an experimental level "x" (see ai.js)
 // Seats and who moves first swap every game; both editions' Wizards rotate. Prints wins and time per decision.
 const fs = require('fs'), path = require('path'), Module = require('module');
 function load(aiFile) {
