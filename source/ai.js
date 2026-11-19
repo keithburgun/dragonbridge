@@ -80,14 +80,25 @@ const stateKey = S => JSON.stringify([S.pos, S.ready, S.gems, S.aside, S.items, 
 /* Every way the play can go from `decs` until `turns` turns have ended. `me` picks the best for itself, the other
    player the worst for `me`. ctx.n is a node budget, shared out evenly between the options at every choice; where
    it runs out, the line is played on with random picks.
-   ctx.leaves (optional) collects every end position reached. Returns {v, decs, sigs}. */
-function searchTurn(snap, decs, me, det, turns, ctx, sigs) {
+   ctx.leaves (optional) collects every end position reached. Returns {v, decs, sigs}.
+   tr = [tiles `me` has gone up the bridge, tiles gone down it] so far this turn. Going one way and then back is
+   wasted motion: between lines that end up equally good, the one without it is preferred (WASTE per tile, far too
+   small to outweigh anything real, such as stepping onto the center to Bump from there and then leaving again). */
+const WASTE = 0.01;
+function searchTurn(snap, decs, me, det, turns, ctx, sigs, tr = [0, 0]) {
   const r = probe(snap, decs, turns, det);
-  if (!r.req) { const leaf = {v: evalS(r.S, me), decs, sigs, S: r.S}; if (ctx.leaves) ctx.leaves.push(leaf); return leaf; }
+  if (!r.req) {
+    // (an escape is a walk off the Exit end, so any step taken toward the Dragon before it was wasted)
+    const waste = r.S.winner === me && r.S.reason === 'escape' ? tr[r.S.dragon === 0 ? 1 : 0] : Math.min(tr[0], tr[1]), leaf = {v: evalS(r.S, me) - WASTE * waste, waste, decs, sigs, S: r.S}; if (ctx.leaves) ctx.leaves.push(leaf); return leaf;
+  }
   const q = r.req, mine = q.p === me, n = q.opts.length, s2 = sigs.concat(sigOf(q));
   let best = null;
-  const tryOpt = i => { ctx.n--; const c = searchTurn(snap, decs.concat(i), me, det, turns, ctx, s2); if (!best || (mine ? c.v > best.v : c.v < best.v)) best = c; };
-  const won = () => best && (mine ? best.v >= 9e5 : best.v <= -9e5);   // a win is enough: stop looking
+  const walk = mine && q.kind === 'tile' && q.who === me;   // me choosing where I go myself
+  const tryOpt = i => {
+    ctx.n--; let t2 = tr; if (walk) { const d = q.opts[i].tile - r.S.pos[me]; if (d) t2 = d > 0 ? [tr[0] + d, tr[1]] : [tr[0], tr[1] - d]; }
+    const c = searchTurn(snap, decs.concat(i), me, det, turns, ctx, s2, t2); if (!best || (mine ? c.v > best.v : c.v < best.v)) best = c;
+  };
+  const won = () => best && (mine ? best.v >= 9e5 && !best.waste : best.v <= -9e5);   // a win is enough: stop looking (but not at a win that wanders)
   if (ctx.n <= 0) tryOpt(Math.floor(Math.random() * n));   // out of budget: play on along one line
   else {   // share what is left of the budget evenly between the options, so that none goes unexamined
     let left = ctx.n;
@@ -108,11 +119,16 @@ function sampleChoose(G, L) {   // Easy
 function aiChoose(G, level) {
   const q = G.req, me = q.p, n = q.opts.length, L = LEVELS[level] || LEVELS.normal;
   if (n === 1) return 0;
-  if (Math.random() < L.blunder) {   // a careless pick, but never a step of its own toward the Dragon's Threatened tiles
+  // A careless pick (of a card, a target, a Gem Action: not of where it walks on its own turn), and never a step of
+  // its own toward the Dragon's Threatened tiles. It is not careless enough to pass up a win it can see this turn.
+  const careless = () => {
     const S = G.S, d = t => S.dragon === 0 ? t : LAST - t, here = S.away[me] ? 99 : dragDist(S, me);
     const sane = q.opts.map((o, i) => i).filter(i => { const o = q.opts[i]; return !(o.tile != null && q.who === me && d(o.tile) <= 4 && d(o.tile) < here); });
     return sane.length ? sane[Math.floor(Math.random() * sane.length)] : randPolicy(q);
-  }
+  };
+  let blunder = Math.random() < L.blunder && !(q.kind === 'tile' && q.who === me && G.S.cur === me);
+  if (blunder && L.sample) return careless();
+  if (blunder && G._plan && G._plan.snap === G.snap && G._plan.level === level && G._plan.me === me) { if (G._plan.win) blunder = false; else return careless(); }
   EW = L.w ? Object.assign({}, W0, L.w) : W0;
   if (L.sample) return sampleChoose(G, L);
   // still following the line worked out earlier this turn?
@@ -124,8 +140,13 @@ function aiChoose(G, level) {
   const mine = G.S.cur === me, det = {me, pts: {}};
   if (!q.noDet) det.pts[at] = Math.floor(Math.random() * 2 ** 31);
   const ctx = {n: L.own, leaves: []};
-  let best = searchTurn(G.snap, G.decs, me, det, 1, ctx, []);
-  if (L.noise) { for (const lf of ctx.leaves) lf.v += (Math.random() - 0.5) * L.noise; best = ctx.leaves.reduce((a, b) => b.v > a.v ? b : a); }
+  const gone = mine && !G.S.away[me] && !G.snap.away[me] ? G.S.pos[me] - G.snap.pos[me] : 0;   // how far it has already gone this turn
+  let best = searchTurn(G.snap, G.decs, me, det, 1, ctx, [], gone > 0 ? [gone, 0] : [0, -gone]);
+  if (blunder && best.S.winner !== me) return careless();
+  if (L.noise) {   // a little misjudgement, the same for every way of reaching the same position
+    const nz = new Map(); for (const lf of ctx.leaves) { if (lf.S.winner != null) continue; const k = stateKey(lf.S); if (!nz.has(k)) nz.set(k, (Math.random() - 0.5) * L.noise); lf.v += nz.get(k); }
+    best = ctx.leaves.reduce((a, b) => b.v > a.v ? b : a);
+  }
   if (L.top && mine && best.S.winner == null) {
     // the most promising distinct end positions, then the opponent's best reply to each
     const seen = new Set(), cand = [];
@@ -148,7 +169,7 @@ function aiChoose(G, level) {
     best = top;
   }
   const steps = {}; for (let k = at; k < best.decs.length; k++) steps[k] = {i: best.decs[k], sig: best.sigs[k - at]};
-  G._plan = {snap: G.snap, level, me, at, pre: G.decs.join(), steps};
+  G._plan = {snap: G.snap, level, me, at, pre: G.decs.join(), steps, win: best.S.winner === me};
   return best.decs[at];
 }
 
