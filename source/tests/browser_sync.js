@@ -5,8 +5,9 @@ const {chromium} = require('playwright'); const path = require('path'), {spawn} 
 const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m); };
 const PORT = 9217, URLB = 'http://127.0.0.1:' + PORT, KEY = 'sb_publishable_test', PAGE = 'file://' + path.resolve(__dirname, '../dist/dragonbridge.html');
 const get = p => new Promise((res, rej) => http.get(URLB + p, r => { let s = ''; r.on('data', d => s += d); r.on('end', () => res(JSON.parse(s || 'null'))); }).on('error', rej));
+let mock;
 (async () => {
-  const mock = spawn(process.execPath, [path.join(__dirname, 'supa_mock.js')], {env: Object.assign({}, process.env, {PORT, KEY}), stdio: 'ignore'});
+  mock = spawn(process.execPath, [path.join(__dirname, 'supa_mock.js')], {env: Object.assign({}, process.env, {PORT, KEY}), stdio: 'ignore'});
   for (let i = 0; i < 40; i++) { try { await get('/__calls'); break; } catch (e) { await new Promise(r => setTimeout(r, 100)); } }
   const b = await chromium.launch(), errs = [];
   const device = async (cfg = {url: URLB, key: KEY}, extra) => {
@@ -105,4 +106,4 @@ const get = p => new Promise((res, rej) => http.get(URLB + p, r => { let s = '';
 
   console.log(`sync+ranked+updates: ${fails.length} fails, ${errs.length} page errors`, fails, errs);
   await b.close(); mock.kill(); process.exit(fails.length || errs.length ? 1 : 0);
-})().catch(e => { console.error(e); process.exit(1); });
+})().catch(e => { console.error(e); if (mock) mock.kill(); process.exit(1); });   // (never leave the stand-in server running)

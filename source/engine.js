@@ -207,7 +207,7 @@ function* bump(S, p, n, o = {}) {
   }
   if (!o.noWhite) gainWhite(S, p, 1, true);
   if (S.away[t]) { log(S, `${nm(S, t)} is off the bridge and can’t be Bumped.`); return {moved: 0}; }
-  const from = S.pos[t], base = Math.max(0, n + S.t.bumpB);
+  const from = S.pos[t], base = Math.max(0, n + S.t.bumpB), baseAway = o.awayN ? Math.max(0, o.awayN + S.t.bumpB) : base;   // o.awayN: a bigger Bump when it goes away from center (Flame Arrow)
   const dirs = [-1, 1].filter(d => (!o.dir || d === o.dir) && (!o.away || isAway(from, d)));
   if (!dirs.length) return {moved: 0};
   const eve = isW(S, p, 'eve') && !e2(S) && !S.away[p] && tileColor(S.pos[p]) === 'P';
@@ -218,8 +218,11 @@ function* bump(S, p, n, o = {}) {
     const aw = isAway(from, d);
     const bonus = (eve ? 2 : 0) + (isW(S, p, 'may2') && S.t.phase === 'action' && aw ? 2 : 0) + (S.power === 'charge' && aw ? 1 : 0) + (S.power === 'hop' ? S.items[1 - p].length : 0)
       + (has(S, p, 'blade') && aw ? 1 : 0) + (has(S, p, 'cutlass') && !e2(S) && aw ? 1 : 0);
-    const tries = [[base, 0, 0]]; if (bonus > 0) tries.push([base + bonus, 1, 0]);
-    if (has(S, p, 'blade') && aw) { tries.push([base + 4, 0, 1]); if (bonus > 0) tries.push([base + bonus + 4, 1, 1]); }
+    const tries = [];
+    for (const b of aw && baseAway !== base ? [base, baseAway] : [base]) {
+      tries.push([b, 0, 0]); if (bonus > 0) tries.push([b + bonus, 1, 0]);
+      if (has(S, p, 'blade') && aw) { tries.push([b + 4, 0, 1]); if (bonus > 0) tries.push([b + bonus + 4, 1, 1]); }
+    }
     for (const [total, useBonus, blade] of tries.sort((a, b) => a[2] - b[2] || a[0] - b[0])) {
       const dest = from + d * total, over = dest < 0 || dest > LAST, tile = clampT(dest), key = tile + (over ? '!' : '');
       if (seen[key]) continue;   // same landing spot: keep the cheapest way there
@@ -227,7 +230,7 @@ function* bump(S, p, n, o = {}) {
       opts.push({tile, dir: d, total, blade, over, tl: over ? total + ' · off the end' : String(total), label: `Bump ${total} to ${tileName(tile)}${over ? ', past the end' : ''}${blade ? ' (reshuffle Ruupart’s Blade)' : ''}`});
     }
   }
-  const dc = yield* ask(S, p, 'tile', `Bump ${who} ${base}: choose where ${t === p ? 'you land' : nm(S, t) + ' lands'}`, opts, {who: t, verb: 'bump'});
+  const dc = yield* ask(S, p, 'tile', `Bump ${who} ${o.awayN ? `${base}, or ${baseAway} away from center` : base}: choose where ${t === p ? 'you land' : nm(S, t) + ' lands'}`, opts, {who: t, verb: 'bump'});
   const dir = dc.dir, total = dc.total;
   if (eve && S.ready[1 - p] > S.ready[p]) ready(S, p, 1);
   if (dc.blade) dropItem(S, p, 'blade');
@@ -255,12 +258,7 @@ const ACT = {
     yield* move(S, p, 2, {card: 1});
     if (S.nest.length) { const c = yield* ask(S, p, 'pick', 'Dazzle: put a Nest card on the bottom of the Action Deck?', cardOpts(S.nest, {zone: 'nest'}).concat({id: 'no', label: 'No thanks'})); if (c.card) { S.nest.splice(S.nest.indexOf(c.card), 1); S.deck.unshift(c.card); log(S, `${nm(S, p)} puts ${ACTIONS[c.card].n} from the Nest on the bottom of the deck.`); } }
   },
-  *flamearrow(S, p) {
-    const t = 1 - p, opts = [{id: 'two', label: 'Bump 2 (either way)'}];
-    if (!S.away[t]) opts.unshift({id: 'four', label: 'Bump 4 away from center'});
-    const c = yield* ask(S, p, 'yn', 'Flame Arrow', opts);
-    if (c.id === 'four') yield* bump(S, p, 4, {away: 1}); else yield* bump(S, p, 2);
-  },
+  *flamearrow(S, p) { yield* bump(S, p, 2, {awayN: 4}); },   // one choice of landing tile: 2 either way, or 4 away from center
   *dart(S, p) { yield* bump(S, p, 1); deplete(S, 1 - p, 1); },
   *soda(S, p) {
     if (S.hand[p].length) {

@@ -51,5 +51,27 @@ const dir = process.argv[2], fails = [], ok = (c, m) => { if (!c) fails.push(m);
   // phone
   await p.setViewportSize({width: 390, height: 780}); await p.evaluate(() => render()); await p.waitForTimeout(100);
   ok(!(await p.isVisible('#logpane')), 'log pane hidden on phone'); ok(await p.evaluate(() => document.documentElement.scrollWidth <= 390), 'no sideways scroll on phone'); await shot('phone');
+  // ---- Flame Arrow: no menu, just the tiles the target can land on (2 either way, 4 away from center)
+  const setup = (hand, pos) => p.evaluate(([hand, pos]) => {
+    P.opt.oneTap = true; P.opt.speed = 0; window.TEST_FAST = true; closeOv(); startMatch({mode: 'versus', wiz: ['derby', 'gelf'], level: 'easy', seed: 4, first: 0});
+    const snap = clone(M.G.snap), all = snap.deck.concat(snap.hand[0]); for (const c of hand) all.splice(all.indexOf(c), 1); snap.hand[0] = hand; snap.deck = all; snap.pos = pos;
+    M.G = Game.resume(snap, [], []); M.fresh = true; resetStage(); render();
+  }, [hand, pos]);
+  await setup(['flamearrow', 'soda', 'bait', 'hop'], [9, 13]);
+  await p.evaluate(() => answer(M.G.req.opts.findIndex(o => o.card === 'flamearrow')));
+  const fa = await p.evaluate(() => ({kind: M.G.req.kind, verb: M.G.req.verb, tiles: M.G.req.opts.map(o => o.tile).sort((a, b) => a - b).join(), btns: document.querySelectorAll('#opts button').length, hot: document.querySelectorAll('#bridge .tile.can, #bridge [data-a="ans"]').length}));
+  ok(fa.kind === 'tile' && fa.verb === 'bump' && fa.tiles === '11,15,17' && fa.btns === 0, 'Flame Arrow asks for a landing tile: 2 either way or 4 away: ' + JSON.stringify(fa));
+  await p.evaluate(() => answer(M.G.req.opts.findIndex(o => o.tile === 17))); ok(await p.evaluate(() => M.G.S.pos[1] === 17), 'and bumps 4 away from center');
+  await setup(['flamearrow', 'soda', 'bait', 'hop'], [9, 10]); await p.evaluate(() => answer(M.G.req.opts.findIndex(o => o.card === 'flamearrow')));
+  ok(await p.evaluate(() => M.G.req.opts.map(o => o.tile).sort((a, b) => a - b).join() === '6,8,12,14'), 'from the center, both ways are away: ' + await p.evaluate(() => M.G.req.opts.map(o => o.tile).join()));
+  // ---- Insight: the revealed hand and the Nest open in their own window
+  await setup(['insight', 'soda', 'bait', 'hop'], [9, 13]); await p.evaluate(() => { const s = M.G.snap; s.nest = ['gale']; s.deck.splice(s.deck.indexOf('gale'), 1); M.G = Game.resume(s, [], []); render(); });
+  await p.evaluate(() => answer(M.G.req.opts.findIndex(o => o.card === 'insight'))); await p.waitForSelector('#ov.show .sheet.insight');
+  const ins = await p.evaluate(() => ({rows: [...document.querySelectorAll('#sheet .inrow')].map(r => r.querySelectorAll('.cardb').length), w: Math.round(document.querySelector('#sheet .inrow img').getBoundingClientRect().width), opp: M.G.S.hand[1].length}));
+  ok(ins.rows[0] === ins.opp && ins.rows[1] === 1 && ins.w >= 64, 'Insight window shows the hand and the Nest, large: ' + JSON.stringify(ins)); await shot('insight');
+  await p.click('#sheet [data-a="close"]'); ok(!(await p.isVisible('#ov.show')) && await p.isVisible('#opts [data-a="insight"]'), 'it can be put away to look at the bridge');
+  await p.click('#opts [data-a="insight"]'); await p.waitForSelector('#ov.show .sheet.insight');
+  const want = await p.evaluate(() => M.G.S.hand[1][0]); await p.click('#sheet .inrow .cardb');
+  ok(await p.evaluate(want => M.G.S.hand[0].includes(want) && !document.querySelector('#ov').classList.contains('show'), want), 'tapping a card takes it and closes the window');
   console.log(`ui: ${fails.length} fails, ${errs.length} page errors`, fails, errs.slice(0, 4)); await b.close(); process.exit(fails.length || errs.length ? 1 : 0);
 })();

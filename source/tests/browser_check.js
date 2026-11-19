@@ -13,11 +13,11 @@ const fails = [], ok = (c, m) => { if (!c) fails.push(m); };
   // plays the current match by clicking; pick(G) may return an option index to prefer
   async function playOut(pick, maxSteps = 900) {
     for (let s = 0; s < maxSteps; s++) {
-      const st = await p.evaluate(() => ({over: !M || M.G.over || document.querySelector('#ov').classList.contains('show'), go: M && !M.busy && M.G.req && M.G.req.p === 0}));
+      const st = await p.evaluate(() => ({over: !M || M.G.over || document.querySelector('#ov').classList.contains('show') && !document.querySelector('#sheet').classList.contains('insight'), go: M && !M.busy && M.G.req && M.G.req.p === 0}));
       if (st.over) return true;
       if (!st.go) { await p.waitForTimeout(25); continue; }
       const want = pick ? await p.evaluate(pick) : null;
-      const sel = '#bridge .tile.can, #hand [data-ci], #table [data-ci], #opts [data-a="ans"], #opts [data-ci]';
+      const sel = await p.evaluate(() => document.querySelector('#ov').classList.contains('show')) ? '#sheet.insight [data-a="ans"]' : '#bridge .tile.can, #hand [data-ci], #table [data-ci], #opts [data-a="ans"], #opts [data-ci], #opts [data-a="insight"]';
       const n = await p.locator(sel).count();
       if (!n) { fails.push('nothing to click for ' + await p.evaluate(() => M.G.req.kind + ': ' + M.G.req.prompt)); return false; }
       if (want != null) { const loc = p.locator(`[data-i="${want}"], [data-ci="${want}"]`).first(); if (await loc.count()) { await loc.click({force: true, timeout: 4000}).catch(e => fails.push('click failed on option ' + want)); continue; } fails.push('option ' + want + ' has no control'); return false; }
