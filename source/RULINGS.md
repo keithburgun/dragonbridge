@@ -43,7 +43,7 @@ Where a card or the manual leaves room, the game does the following. Change any 
 
 **2nd Edition (on by default)**
 
-New matches use the 2nd Edition cards unless "2nd Edition rules" is unticked on the Play screen or in Options. The Daily Challenge, the tutorial and the Puzzles always use 2nd Edition. Ten cards differ so far; everything else is unchanged.
+New matches use the 2nd Edition cards unless "2nd Edition rules" is unticked on the Play screen or in Options. The Daily Challenge, the tutorial and the Puzzles always use 2nd Edition. Thirteen cards differ so far; everything else is unchanged.
 
 | Card | 2nd Edition | Read as |
 |---|---|---|
@@ -51,6 +51,9 @@ New matches use the 2nd Edition cards unless "2nd Edition rules" is unticked on 
 | May Danaris | After Hacking: Teleport 1 or a White Gem. Gem Action on a purple tile: Bump 1 and the opponent gives a random card | No Hack discount, no face-down Hacks, no reverse side. The Bump gains a White Gem as usual. The card is picked at random by the game; the giver knows which card it was |
 | Robot Boy | Game start and Flight: gain a random Item. Roost: lose 1 Item of your choice | "Random" is the top of the shuffled Item Deck, not the Market. Any Flight or Roost counts, on either player's turn. His 1E powers are gone |
 | Abragail | 2 or 3 ready Gems for +1 Move, +1 Bump. After buying: may take a Nest card | The "or ready a Gem" choice is gone |
+| Peebnup Bubber | +1 Teleport per Charge in the Nest. When the opponent readies a Gem: on a purple tile, you also ready a Gem | Triggers once each time the opponent readies, however many Gems that was, and readies one. His 1E Gem Action is gone |
+| Transmogrifier | On Flight: gain 4 White Gems | Its owner gains on any Flight and keeps the Item; the 1E Gem Action is gone |
+| Blink Scroll | On Move from a purple tile: +1 Move and a White Gem | Automatic and kept (never reshuffled). The White Gem is gained only if you actually leave the tile |
 | Roller Skates | +1 Move | Either direction |
 | Cool Backpack | When you ready from a green Gem tile, ready again | Applies to the "ready a Gem" Gem Action; nothing on Roost |
 | Techno-Cutlass | Opponent lands on an End or Gem tile: they deplete a Gem and discard a White Gem | No +1 Bump. The White Gem returns to the supply |

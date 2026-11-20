@@ -73,12 +73,15 @@ const ED2 = {
     skates: '+1 Move.',
     cutlass: 'On BUMP: if the opponent lands on an End tile or Gem tile, the opponent depletes a Gem and discards a White Gem.',
     backpack: 'When you ready a Gem from a green Gem tile, ready another Gem.',
+    transmog: 'On FLIGHT: gain 4 White Gems.',
+    blink: 'On MOVE from a purple tile: +1 Move, and gain a White Gem.',
   },
   hacks: {lullaby: 'The opponent may reveal and reshuffle a 2-Wing card from their hand. If they didn’t, gain a free Item.'},
   wiz: {
     eve: ['Turn start: if you are on a purple tile, you have +2 Bump this turn.'],
     may: ['On Bridge Hack: after Hacking, Teleport 1 OR gain a White Gem.', 'Gem Action: if you are on a purple tile, BUMP 1 and the opponent gives you a random card from their hand.'],
     robot: ['Game start: gain a random Item.', 'Roost: lose 1 Item of your choice.', 'Flight: gain a random Item.'],
+    peebnup: ['At all times: +1 Teleport per Charge in the Nest.', 'When the opponent readies a Gem: if you are on a purple tile, you also ready a Gem.'],
     abragail: ['While you have 2 or 3 ready Gems at turn start: +1 Move and +1 Bump for the turn.', 'After you buy an Item: you may take any card from the Nest to your hand.'],
   },
 };
@@ -146,6 +149,7 @@ function ready(S, p, n = 1) {
   const k = Math.min(n, dep(S, p)); if (k <= 0) return 0;
   S.ready[p] += k; log(S, `${nm(S, p)} readies ${k} Gem${k > 1 ? 's' : ''}.`);
   if (S.power === 'insight' && !S.away[p] && !isGemTile(S, S.pos[p]) && S.ready[1 - p] > 0) { log(S, 'Dragon Power (Insight):'); deplete(S, 1 - p, 1); }
+  if (e2(S) && isW(S, 1 - p, 'peebnup') && !S.away[1 - p] && tileColor(S.pos[1 - p]) === 'P' && dep(S, 1 - p) > 0) { pw(S, 1 - p); ready(S, 1 - p, 1); }   // 2E Peebnup: once per time the opponent readies
   return k;
 }
 function deplete(S, p, n = 1) { const k = Math.min(n, S.ready[p]); if (k <= 0) return 0; S.ready[p] -= k; log(S, `${nm(S, p)} depletes ${k} Gem${k > 1 ? 's' : ''}.`); return k; }
@@ -190,13 +194,16 @@ function* move(S, p, n, o = {}) {
   if (isExit(S, S.pos[p]) && !S.t.noEscape) win(S, p, 'escape');
   if (o.card && isW(S, p, 'robot') && !e2(S) && S.t.phase === 'action') n = S.hackDown[p].length >= 2 ? 3 : 1;
   let blink = 0;
-  if (has(S, p, 'blink') && (yield* yn(S, p, 'Reshuffle Blink Scroll for +5 Move?', 'Use Blink Scroll'))) { dropItem(S, p, 'blink'); blink = 5; }
+  const blink2 = e2(S) && has(S, p, 'blink') && tileColor(S.pos[p]) === 'P';   // 2E Blink Scroll: kept, and automatic
+  if (blink2) blink = 1;
+  else if (!e2(S) && has(S, p, 'blink') && (yield* yn(S, p, 'Reshuffle Blink Scroll for +5 Move?', 'Use Blink Scroll'))) { dropItem(S, p, 'blink'); blink = 5; }
   const from = S.pos[p], gen = Math.max(0, n + S.t.moveB + blink + (isW(S, p, 'may2') && S.t.phase === 'action' ? 1 : 0) + (e2(S) && has(S, p, 'skates') ? 1 : 0));
   const away = (S.power === 'leap' ? 1 : 0) + (has(S, p, 'skates') && !e2(S) ? 2 : 0), opts = [];
   for (let t = 0; t <= LAST; t++) { const d = t - from; if (!d || Math.abs(d) <= gen + (isAway(from, Math.sign(d)) ? away : 0)) opts.push({tile: t, label: d ? tileName(t) : 'Stay'}); }
   const c = yield* ask(S, p, 'tile', `Move up to ${gen}${away ? ' (+' + away + ' away from center)' : ''}`, opts, {verb: 'move', who: p});
   S.pos[p] = c.tile; const moved = Math.abs(c.tile - from);
   if (moved) log(S, `${nm(S, p)} moves ${moved} to ${tileName(c.tile)}.`);
+  if (moved && blink2) { log(S, 'Blink Scroll:'); gainWhite(S, p, 1); }
   if (has(S, p, 'loom') && !o.noLoom && (yield* yn(S, p, 'Accursed Loom: Bump 1 now?', 'Bump 1'))) yield* bump(S, p, 1, e2(S) ? {noWhite: 1} : {});
   return moved;
 }
@@ -403,8 +410,8 @@ function* gemPhase(S, p) {
     for (const it of S.items[p]) o.push({act: 'omarbump', item: it, label: `Omar: reshuffle ${ITEMS[it].n} to Bump 6`});
   }
   if (isW(S, p, 'andromeda') && S.ready[p] > 0) o.push({act: 'andbump', label: 'Andromeda: deplete a Gem to Bump 2'});
-  if (isW(S, p, 'peebnup') && near(6)) o.push({act: 'peeb', label: 'Peebnup: both players ready a Gem, then you ready another'});
-  if (has(S, p, 'transmog')) o.push({act: 'transmog', item: 'transmog', label: 'Transmogrifier: reshuffle it for 5 White Gems, then you may Hack'});
+  if (isW(S, p, 'peebnup') && !e2(S) && near(6)) o.push({act: 'peeb', label: 'Peebnup: both players ready a Gem, then you ready another'});
+  if (has(S, p, 'transmog') && !e2(S)) o.push({act: 'transmog', item: 'transmog', label: 'Transmogrifier: reshuffle it for 5 White Gems, then you may Hack'});
   o.push({act: 'pass', label: 'End Gem Phase'});
   const c = yield* ask(S, p, 'gem', 'Gem Phase: choose one Gem Action', o);   // with nothing but "End Gem Phase" on offer, the phase is skipped
   switch (c.act) {
@@ -458,6 +465,7 @@ function* dragonCheck(S, p) {
     if (hadGelf) { S.gelf[q] = 0; S.gems[q]++; if (S.gelfR[q]) S.ready[q]++; log(S, `${nm(S, q)}’s Gem returns from the Dragon.`); ready(S, q, 1); }
     if (ev === 'flight') {
       if (isW(S, q, 'trevor') && dep(S, q) > 0) { pw(S, q); ready(S, q, 1); }
+      if (e2(S) && has(S, q, 'transmog')) { log(S, 'Transmogrifier:'); gainWhite(S, q, 4); }
       if (e2(S) && has(S, q, 'thunderbox')) { log(S, 'Thunderbox:'); yield* bump(S, q, 2); }
       if (e2(S) && isW(S, q, 'robot')) { pw(S, q); yield* randomItem(S, q); }
       if (isW(S, q, 'gelf') && !hadGelf && S.gems[q] > 0) {

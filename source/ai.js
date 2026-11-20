@@ -18,7 +18,7 @@ if (typeof process !== 'undefined' && process.env && process.env.AIX) { const j 
    cannot get out of the Threatened tiles. Generous on purpose (it ignores Hacks and Items that add more). */
 function selfReach(S, p) {
   const h = S.hand[p], rdy = S.ready[p], tp = S.gelf[1 - p] ? 0 : 1;
-  const mb = S.t && S.cur === p ? 0 : 0, extra = (has(S, p, 'skates') ? (e2(S) ? 1 : 2) : 0) + (S.power === 'leap' ? 1 : 0) + (has(S, p, 'blink') ? 5 : 0)
+  const mb = S.t && S.cur === p ? 0 : 0, extra = (has(S, p, 'skates') ? (e2(S) ? 1 : 2) : 0) + (S.power === 'leap' ? 1 : 0) + (has(S, p, 'blink') ? (e2(S) ? (tileColor(S.pos[p]) === 'P' ? 1 : 0) : 5) : 0)
     + (isW(S, p, 'abragail') && (e2(S) ? rdy >= 2 : rdy === 1 || rdy === 2) ? 1 : 0) + (isW(S, p, 'may2') ? 1 : 0);
   const robot1 = isW(S, p, 'robot') && !e2(S), tpn = k => tp * Math.max(0, k + tpBonus(S, p));
   const one = c => c === 'hop' ? (robot1 ? 1 : 3) + extra : c === 'leap' ? (robot1 ? 1 : 2) + extra + (rdy > 0 ? tpn(2) : 0) : ACTIONS[c].move ? (robot1 ? 1 : 2) + extra : c === 'gale' ? tpn(1) : 0;

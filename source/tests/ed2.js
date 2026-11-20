@@ -86,4 +86,22 @@ for (const ed of [2, 1]) {
   // Soda readies a Gem; a Gem tile does too (tile 5): the turn after, Fireball is playable again
   assert.equal(E.checkState(S), null);
 }
+// Peebnup: readies along with the opponent while on a purple tile; no Gem Action
+G = setup(['eve', 'peebnup'], ['soda', 'hop', 'step', 'bait'], {pre: S => { S.ready = [0, 0]; S.pos = [8, 11]; }}); S = G.S;
+const toGem = G => { let n = 0; while (G.req.kind !== 'gem' && n++ < 20) G.answer(G.req.kind === 'tile' ? G.req.opts.findIndex(o => o.label === 'Stay') : G.req.opts.length - 1); };
+pick(G, o => o.card === 'bait'); toGem(G); pick(G, o => o.act === 'ready'); assert.deepEqual(S.ready, [1, 1], 'Peebnup readies too: ' + S.ready);
+G = setup(['eve', 'peebnup'], ['soda', 'hop', 'step', 'bait'], {pre: S => { S.ready = [0, 0]; S.pos = [8, 9]; }}); S = G.S;
+pick(G, o => o.card === 'bait'); toGem(G); pick(G, o => o.act === 'ready'); assert.deepEqual(S.ready, [1, 0], 'not off a purple tile');
+G = setup(['peebnup', 'eve'], ['soda', 'hop', 'step', 'bait'], {pre: S => { S.ready = [0, 0]; S.pos = [12, 11]; }}); S = G.S;
+pick(G, o => o.card === 'bait'); toGem(G); assert(!has(G, o => o.act === 'peeb'), 'no Gem Action in 2E'); pick(G, o => o.act === 'ready'); assert.deepEqual(S.ready, [1, 0], 'his own readying gives the opponent nothing');
+G = setup(['peebnup', 'derby'], ['soda', 'hop', 'step', 'bait'], {ed: 1, pre: S => { S.ready = [0, 0]; }}); pick(G, o => o.card === 'bait'); toGem(G); assert(has(G, o => o.act === 'peeb'), '1E keeps the Gem Action');
+// Blink Scroll: from a purple tile, +1 Move and a White Gem; kept
+G = setup(['derby', 'gelf'], ['hop', 'soda', 'step', 'bait'], {pre: S => { give(S, 0, 'blink'); S.pos = [11, 9]; }}); S = G.S;
+pick(G, o => o.card === 'hop'); assert(/Move up to 4$/.test(G.req.prompt), G.req.prompt); { const w = S.white[0]; pick(G, o => o.tile === 13); assert(S.white[0] === w + 1 && S.items[0].includes('blink'), 'a White Gem, and the Scroll stays'); }
+G = setup(['derby', 'gelf'], ['hop', 'soda', 'step', 'bait'], {pre: S => { give(S, 0, 'blink'); S.pos = [9, 11]; }}); pick(G, o => o.card === 'hop'); assert(/Move up to 3$/.test(G.req.prompt), 'nothing from a yellow tile: ' + G.req.prompt);
+G = setup(['derby', 'gelf'], ['hop', 'soda', 'step', 'bait'], {ed: 1, pre: S => { give(S, 0, 'blink'); }}); pick(G, o => o.card === 'hop'); assert(/Blink Scroll/.test(G.req.prompt), '1E still asks');
+// Transmogrifier: 4 White Gems on Flight; no Gem Action
+G = setup(['derby', 'gelf'], ['bait', 'soda', 'step', 'hop'], {pre: S => { give(S, 0, 'transmog'); const i = S.deck.indexOf('shockwave'); S.nest = ['gale', 'gale', 'charge'].map(c => S.deck.splice(S.deck.indexOf(c), 1)[0]); }}); S = G.S;
+{ const w = S.white[0], need = E.flightNeed(S), wn = S.nest.reduce((a, c) => a + E.ACTIONS[c].w, 0); pick(G, o => o.card === 'bait'); let n = 0, sawT = false; while (!S.flights && !G.over && S.turn < 2 && n++ < 30) { if (G.req.kind === 'gem') { sawT = sawT || has(G, o => o.act === 'transmog'); } G.answer(G.req.opts.length - 1); }
+  assert(!sawT, 'no Transmogrifier Gem Action in 2E'); if (S.flights) assert(S.white[0] >= w + 4 && S.items[0].includes('transmog'), 'Flight pays 4: ' + w + ' -> ' + S.white[0]); else assert(wn + 3 < need, 'expected a Flight (' + (wn + 3) + '/' + need + ')'); }
 console.log('2nd Edition tests ok');
