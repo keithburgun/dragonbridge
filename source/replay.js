@@ -82,12 +82,15 @@ function rpCopy(id) {
 }
 function rpDownload(id) {
   const r = rpFind(id); if (!r) return;
+  /*FILESAVE*/
   try {
     const a = document.createElement('a'), d = new Date(r.at), day = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(Object.assign({dragonBridgeReplay: 1}, r))], {type: 'application/json'}));
     a.download = `dragon-bridge-${day}-${r.wiz[0]}-vs-${r.wiz[1]}.dbreplay.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    toast('Replay file saved. If nothing was saved here, use Copy code instead.');
-  } catch (e) { toast('Couldn’t save a file here. Use Copy code instead.'); }
+    toast('Replay file saved. If nothing was saved here, use Copy code instead.'); return;
+  } catch (e) {}
+  /*END FILESAVE*/
+  toast('Couldn’t save a file here. Use Copy code instead.');
 }
 function rpImportSheet(msg) {
   openOv(`<h2>Import a replay</h2>${msg ? `<p class="acerr" role="alert" style="margin:0">${esc(msg)}</p>` : ''}

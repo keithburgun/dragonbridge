@@ -34,7 +34,8 @@ page = (rd('template.html').replace('/*FONTS*/', fontcss).replace('/*ENGINE*/', 
 os.makedirs(os.path.join(H, 'dist'), exist_ok=True)
 full = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>body{margin:0}[hidden]{display:none!important}</style>\n<script>window.DB_SYNC=true;window.DB_P2P=true;</script>\n<script>' + rd('vendor/peerjs.min.js').replace('</script', '<\\/script') + '</script>\n' + page   # account sync and online play (PeerJS): the apps, itch.io and your own site (page.html, for claude.ai, has no network access) + '\n</html>\n'
 with zipfile.ZipFile(os.path.join(H, 'dist', 'dragonbridge-web.zip'), 'w', zipfile.ZIP_DEFLATED) as z: z.writestr('index.html', full)
-wr('dist/page.html', page); wr('dist/dragonbridge.html', full); wr('../www/index.html', full)
+# page.html runs inside a host that never lets a page save files, so the replay file-save code is left out of it (the code to copy remains)
+wr('dist/page.html', re.sub(r'/\*FILESAVE\*/.*?/\*END FILESAVE\*/', '', page, flags=re.S)); wr('dist/dragonbridge.html', full); wr('../www/index.html', full)
 EXPORTS = 'searchTurn,stateKey,evalS,ED2,itemText,hackText,wizLines,ACTIONS,DECK,ITEMS,HACKS,WIZ,WIZ_IDS,newState,Game,simulate,snapshot,checkState,evalS,aiChoose,LEVELS,play,clone,probe,puzzleTurns,puzzleOk,puzzleForced,puzzleTurnsLeft,puzzleReply,puzzleHint,isExit,isThreat,wings,flightNeed'
 wr('tests/eng_all.js', engine + '\nmodule.exports={' + EXPORTS + '};\n')
 print(f'dist/dragonbridge.html  {len(full) / 1e6:.2f} MB  ({len(imgs)} images, {pages} rulebook pages)')
