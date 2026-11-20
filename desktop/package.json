@@ -2,7 +2,7 @@
   "name": "dragonbridge",
   "productName": "Dragon Bridge",
   "version": "1.0.0",
-  "description": "Dragon Bridge vs CPU",
+  "description": "Dragon Bridge",
   "author": "Keith Burgun",
   "main": "main.js",
   "private": true,
@@ -13,10 +13,47 @@
   "build": {
     "appId": "com.dragonbridge.game",
     "productName": "Dragon Bridge",
-    "files": ["main.js", "preload.js", "icon.ico", "icon.png", "app/**/*"],
-    "directories": { "output": "dist" },
-    "win": { "target": [{ "target": "portable", "arch": ["x64"] }], "icon": "icon.ico" },
-    "portable": { "artifactName": "DragonBridge-${version}.exe" },
-    "publish": null
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.ico",
+      "icon.png",
+      "app/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.ico"
+    },
+    "portable": {
+      "artifactName": "DragonBridge-${version}.exe"
+    },
+    "publish": null,
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.png",
+      "category": "Game",
+      "executableName": "dragonbridge",
+      "synopsis": "Escape the bridge, or push your rival into the Dragon"
+    },
+    "appImage": {
+      "artifactName": "DragonBridge-${version}.AppImage"
+    }
   }
 }

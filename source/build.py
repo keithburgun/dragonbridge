@@ -29,9 +29,10 @@ engine = rd('engine.js') + '\n' + rd('ai.js')
 ver = os.environ.get('DRAGONBRIDGE_VERSION') or datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 page = (rd('template.html').replace('/*FONTS*/', fontcss).replace('/*ENGINE*/', engine + '\nconst APP_VERSION = ' + json.dumps(ver) + ';')
         .replace('/*IMGS*/{}', json.dumps(imgs, separators=(',', ':'))).replace('/*MANUAL_PAGES*/0', str(pages))
-        .replace('/*PUZZLES*/[]', rd('puzzles.json').strip()))
+        .replace('/*PUZZLES*/[]', rd('puzzles.json').strip())
+        .replace('/*REPLAY*/', rd('replay.js')).replace('/*ONLINE*/', rd('online.js')).replace('/*PAD*/', rd('pad.js')))
 os.makedirs(os.path.join(H, 'dist'), exist_ok=True)
-full = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>body{margin:0}[hidden]{display:none!important}</style>\n<script>window.DB_SYNC=true;</script>\n' + page   # account sync: the apps, itch.io and your own site (page.html, for claude.ai, has no network access) + '\n</html>\n'
+full = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<style>body{margin:0}[hidden]{display:none!important}</style>\n<script>window.DB_SYNC=true;window.DB_P2P=true;</script>\n<script>' + rd('vendor/peerjs.min.js').replace('</script', '<\\/script') + '</script>\n' + page   # account sync and online play (PeerJS): the apps, itch.io and your own site (page.html, for claude.ai, has no network access) + '\n</html>\n'
 with zipfile.ZipFile(os.path.join(H, 'dist', 'dragonbridge-web.zip'), 'w', zipfile.ZIP_DEFLATED) as z: z.writestr('index.html', full)
 wr('dist/page.html', page); wr('dist/dragonbridge.html', full); wr('../www/index.html', full)
 EXPORTS = 'searchTurn,stateKey,evalS,ED2,itemText,hackText,wizLines,ACTIONS,DECK,ITEMS,HACKS,WIZ,WIZ_IDS,newState,Game,simulate,snapshot,checkState,evalS,aiChoose,LEVELS,play,clone,probe,puzzleTurns,puzzleOk,puzzleForced,puzzleTurnsLeft,puzzleReply,puzzleHint,isExit,isThreat,wings,flightNeed'

@@ -33,12 +33,14 @@ body.mview{background:var(--out)}
 #title{align-items:center;justify-content:center;gap:14px;text-align:center}
 #title h1{margin:0;line-height:0}
 #title h1 img{display:block;width:min(88cqw,500px);max-height:32cqh;object-fit:contain;filter:drop-shadow(0 6px 16px #0008)}
-.tmenu{display:flex;flex-direction:column;gap:8px;width:min(100%,300px)}
+.tmenu{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(100%,380px)} .tmenu .pri,.tmenu .upd,.tmenu .wide{grid-column:1/-1} .sheet .tmenu{grid-template-columns:1fr;width:min(100%,300px)}
+.tmute{position:absolute;top:max(10px,env(safe-area-inset-top,0px));right:12px;width:42px;height:42px;border-radius:50%;background:var(--panel);border:1px solid var(--line);font-size:1.15rem;line-height:1;display:grid;place-items:center} .tmute:hover{border-color:var(--gold2)}
 .tbtn{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:.7em;font-weight:600;font-size:1.05rem}
 .tbtn:hover{background:var(--panel2);border-color:var(--gold2)} .tbtn.pri{background:linear-gradient(#ffd86b,#f0a93a);color:#3b0c18;border-color:#fff0b8}
 /* setup */
 .wrap{width:min(100%,900px);margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.volrow input{width:min(46cqw,200px);accent-color:var(--gold)} .volrow.off{opacity:.45}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .pick{display:flex;gap:10px;align-items:center;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:6px 8px;min-width:0}
@@ -173,6 +175,40 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
   #app > *{--card:22.5cqw;--mini:10.2cqw;--tok:6.2cqw;--dw:11cqw} #hand{gap:3px}
 }
 @container app (max-height:560px){#app > *{--card:clamp(64px,19cqh,120px);--mini:clamp(30px,8.5cqh,56px)} #prompt{min-height:40px}}
+/* ---------- replays ---------- */
+.rprow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.rprow > img{width:44px;height:44px;border-radius:50%;flex:none}.rpinfo{flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:2px}.rpinfo b{overflow-wrap:anywhere}
+.rpcode{font:12px/1.35 ui-monospace,Consolas,monospace;width:100%;min-height:96px;max-height:30cqh;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:inherit;padding:8px;resize:vertical;word-break:break-all}
+.rpbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}.rpbar input[type=range]{width:min(40cqw,260px);accent-color:var(--gold)}
+/* ---------- online ---------- */
+.olgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.olgrid > div{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel);text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}.olgrid h3,.olgrid p{margin:0}
+.olin{font:inherit;font-weight:800;letter-spacing:.2em;text-transform:uppercase;text-align:center;width:9.5em;padding:9px 8px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg2);color:inherit}
+.olinvite{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center;border:1px dashed var(--gold2);border-radius:12px;padding:10px}.olbig{font-size:1.5rem;letter-spacing:.18em;color:var(--gold)}
+.olslots{display:grid;grid-template-columns:1fr 1fr;gap:10px}.olslot{display:flex;gap:10px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:8px;background:var(--panel);min-width:0}.olslot.rdy{border-color:var(--good)}
+.olslot img{width:52px;height:52px;border-radius:50%;flex:none}.olslot img.dim{opacity:.35;filter:grayscale(1)}.olslot div{display:flex;flex-direction:column;min-width:0}.olslot span{font-size:.85rem;color:var(--dim);overflow-wrap:anywhere}.olslot .olrdy{color:var(--good);font-weight:700}
+.pick:disabled{opacity:.35;cursor:default}
+#onlbar{position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:60;display:none;max-width:92%;background:#3b0c18;border:1px solid var(--gold2);border-radius:999px;padding:.4em 1em;font-weight:700;font-size:.9rem;text-align:center;box-shadow:0 6px 18px #000a}#onlbar.show{display:block}
+/* ---------- controller / keyboard (pad.js) ---------- */
+body.pad,body.pad *{cursor:none!important}
+body.pad :focus-visible:not(.padf){outline:none!important}
+body.pad .padf{outline:3px solid #fff!important;outline-offset:3px;box-shadow:0 0 0 7px #2fc8ff,0 0 26px 8px rgba(47,200,255,.7)!important;z-index:5}
+body.pad #hand .cardb.padf{translate:0 -14px;z-index:60!important}
+body.pad .tile.padf{outline-offset:1px;box-shadow:0 0 0 4px #2fc8ff,0 0 18px 6px rgba(47,200,255,.8)!important;z-index:4}
+body.pad label.padf{border-radius:8px;outline-offset:2px;box-shadow:0 0 0 5px #2fc8ff!important}
+#padhint{position:absolute;right:10px;bottom:max(8px,env(safe-area-inset-bottom,0px));z-index:90;display:none;gap:14px;align-items:center;padding:5px 14px;border-radius:999px;background:rgba(20,6,12,.86);color:#fff;font-size:13px;font-weight:700;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.4);max-width:calc(100% - 20px);overflow:hidden}
+#padhint.show{display:flex}#padhint.idle{opacity:.4;transition:opacity .6s}
+/* with the match log beside the board, the prompts sit at the foot of the log instead of over the Menu button */
+@container app (orientation:landscape) and (min-width:900px){#game:not([hidden]) ~ #padhint{right:27px;bottom:17px;width:calc(clamp(200px,20cqw,290px) - 22px);white-space:normal;flex-wrap:wrap;justify-content:center;gap:5px 12px;border-radius:12px;padding:6px 8px} body.pad #logpane{padding-bottom:72px}}
+#padhint .ph{display:inline-flex;align-items:center;gap:5px}
+#padhint .pg{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 4px;border-radius:999px;background:#4a3540;color:#fff;font-size:11px;line-height:1;box-shadow:inset 0 -2px 0 rgba(0,0,0,.35)}
+#padhint .pg.xbox.pg-a{background:#3fa34d}#padhint .pg.xbox.pg-b{background:#d0403a}#padhint .pg.xbox.pg-x{background:#2f6fd6}#padhint .pg.xbox.pg-y{background:#d9a514;color:#1a1200}
+#padhint .pg.ps.pg-a{color:#8fb3ff}#padhint .pg.ps.pg-b{color:#ff8a8a}#padhint .pg.ps.pg-x{color:#ff9be6}#padhint .pg.ps.pg-y{color:#6fe0c4}
+#padhint .pg.pg-lb,#padhint .pg.pg-rb{border-radius:6px;font-size:10px}
+#padhint .pg.key{border-radius:5px;background:#f3eefc;color:#1d1530;min-width:22px;padding:0 6px;font-size:10px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.28)}
+#osk{position:absolute;inset:auto 0 0 0;z-index:95;display:flex;justify-content:center;padding:10px 10px max(12px,env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,#000c 30%)}
+.oskbox{background:var(--bg2);border:1px solid var(--gold2);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 -8px 30px #000c;max-width:100%}
+.oskval{min-height:1.9em;padding:.25em .6em;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-weight:700;letter-spacing:.06em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left}
+.oskrow{display:flex;gap:5px;justify-content:center}.oskrow .btn{min-width:clamp(24px,7.4cqw,44px);padding:.5em .3em}
 </style>
 
 <div id="app">
@@ -183,12 +219,16 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
       <button class="tbtn upd" data-a="updgo" id="updbtn" hidden>Update Available!</button>
       <button class="tbtn pri" data-a="cont" id="contbtn" hidden>Continue match</button>
       <button class="tbtn pri" data-a="play" id="playbtn">Play</button>
+      <button class="tbtn wide" data-a="online" id="onlbtn" hidden>Play Online</button>
       <button class="tbtn" data-a="tutorial">How to Play</button>
       <button class="tbtn" data-a="library">Card Library</button>
       <button class="tbtn" data-a="rulebook">Rulebook</button>
+      <button class="tbtn" data-a="replays">Replays</button>
       <button class="tbtn" data-a="stats">Stats</button>
       <button class="tbtn" data-a="options">Options</button>
+      <button class="tbtn wide" data-a="exit" id="exitbtn" hidden>Exit</button>
     </nav>
+    <button class="tmute" data-a="mute" id="tmute" aria-label="Mute sound" aria-pressed="false"></button>
     <p class="lbl" style="margin:0">Design and art by Keith Burgun <span id="ver"></span></p>
   </section>
   <section class="screen" id="setup" hidden><div class="wrap" id="setupbody"></div></section>
@@ -208,6 +248,9 @@ table.st{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums} 
   <div id="splash" aria-hidden="true"><img alt=""><b></b></div>
   <div id="banner" aria-hidden="true"></div>
   <div id="toast" role="status" aria-live="polite"></div>
+  <div id="onlbar" role="status"></div>
+  <div id="padhint" aria-hidden="true"></div>
+  <div id="osk" hidden></div>
   <div id="coach" hidden></div>
   <div id="peek" aria-hidden="true"><img alt=""></div>
   <div class="ov" id="ov" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
@@ -230,7 +273,7 @@ const cardImg = (kind, id) => im(kind === 'wiz' ? 'wz_' + id : kind === 'item' ?
 const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
 /* ---------- profile (saved in this browser) ---------- */
-const DEF = {opt: {mview: false, ed2: true, speed: 1, sound: true, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, rk: {}, daily: {}, pz2: {}, trophies: 0, tutDone: false, seen: {}};
+const DEF = {opt: {mview: false, ed2: true, speed: 1, sound: true, vol: 0.7, oneTap: false, tips: false, wiz: 'derby', opp: 'random', level: 'normal', mode: 'versus'}, st: {}, wz: {}, ach: {}, rk: {}, daily: {}, pz2: {}, trophies: 0, tutDone: false, seen: {}};
 let P = clone(DEF), MEM = {};
 const store = {get(k) { try { return localStorage.getItem(k); } catch (e) { return MEM[k] || null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { MEM[k] = v; } }, del(k) { try { localStorage.removeItem(k); } catch (e) {} delete MEM[k]; }};
 /* Ranked keeps one rating per Wizard, plus one for playing Random: P.rk[wizard id or 'random'] = {elo, best, g}.
@@ -254,22 +297,30 @@ const rkName = k => k === 'random' ? 'Random' : WIZ[k].s;
 const rkTop = () => Object.keys(P.rk).sort((a, b) => P.rk[b].elo - P.rk[a].elo)[0];
 
 /* ---------- sound ---------- */
-let AC = null;
+/* Everything plays through one master gain: the Volume slider (Options) sets it, Mute silences it. 70% is the
+   level the sounds were designed at. */
+let AC = null, MG = null;
+function audio() {
+  if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); MG = AC.createGain(); MG.connect(AC.destination); }
+  MG.gain.value = Math.max(0, Math.min(1, +(P.opt.vol ?? 0.7))) / 0.7;
+  if (AC.state === 'suspended') AC.resume().catch(() => {});
+  return AC;
+}
 function beep(f, d = .09, type = 'triangle', v = .07, slide = 0) {
   if (!P.opt.sound) return;
-  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; if (slide) o.frequency.linearRampToValueAtTime(f + slide, AC.currentTime + d); g.gain.value = v; g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + d); o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime + d); } catch (e) {}
+  try { audio(); const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; if (slide) o.frequency.linearRampToValueAtTime(f + slide, AC.currentTime + d); g.gain.value = v; g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + d); o.connect(g).connect(MG); o.start(); o.stop(AC.currentTime + d); } catch (e) {}
 }
 function roar() {   // a synth dragon roar: two detuned low oscillators with a growl, plus a breath of noise
   if (!P.opt.sound) return;
   try {
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const t = AC.currentTime, d = 1.5, out = AC.createGain(), lp = AC.createBiquadFilter();
+    audio(); const t = AC.currentTime, d = 1.5, out = AC.createGain(), lp = AC.createBiquadFilter();
     lp.type = 'lowpass'; lp.frequency.setValueAtTime(1100, t); lp.frequency.exponentialRampToValueAtTime(240, t + d);
     out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.3, t + 0.1); out.gain.setValueAtTime(0.3, t + 0.55); out.gain.exponentialRampToValueAtTime(0.0001, t + d);
     const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.setValueAtTime(31, t); lfo.frequency.linearRampToValueAtTime(17, t + d); lg.gain.value = 0.13; lfo.connect(lg).connect(out.gain);
     for (const [type, f0, f1] of [['sawtooth', 150, 46], ['square', 76, 33], ['sawtooth', 113, 39]]) { const o = AC.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d); o.connect(lp); o.start(t); o.stop(t + d); }
     const nb = AC.createBuffer(1, AC.sampleRate * d, AC.sampleRate), ch = nb.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
     const ns = AC.createBufferSource(), ng = AC.createGain(), bp = AC.createBiquadFilter(); ns.buffer = nb; bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 0.7; ng.gain.value = 0.5; ns.connect(bp).connect(ng).connect(out); ns.start(t);
-    lp.connect(out).connect(AC.destination); lfo.start(t); lfo.stop(t + d);
+    lp.connect(out).connect(MG); lfo.start(t); lfo.stop(t + d);
   } catch (e) {}
 }
 function steps(n, gap) { for (let i = 0; i < n; i++) setTimeout(() => { const v = 1 - i / n; beep(i % 2 ? 96 : 118, .08, 'triangle', .2 * v, -30); beep(900, .02, 'square', .02 * v); }, i * gap); }   // footsteps fading into the distance
@@ -301,37 +352,33 @@ function startMatch(cfg) {
   let G;
   if (cfg.puzzle) { G = Game.resume(cfg.puzzle.snap, [], []); }
   else { const S = newState({wiz: cfg.wiz, seed: cfg.seed, first: cfg.first, names: namesFor(cfg.wiz), ed: cfg.ed === 1 ? 1 : 2}); G = new Game(S); }
-  M = {G, cfg, busy: false, fresh: true, id: Date.now()}; resetStage();
+  M = {G, cfg, busy: false, fresh: true, id: Date.now()}; M.rec = rpStart(G, cfg); resetStage();
   $('#ticker').textContent = ''; show('game'); closeOv();
   const ge = $('#goal'); ge.hidden = !cfg.puzzle;
   if (cfg.puzzle) ge.textContent = puzzleGoal(cfg.puzzle);
   saveMatch(); render(); pump();
   if (cfg.puzzle) openOv(`<p class="lbl" style="margin:0;text-align:center">Puzzle ${PUZZLES.indexOf(cfg.puzzle) + 1}</p><h2 style="text-align:center">${esc(cfg.puzzle.name)}</h2><p style="margin:0;text-align:center;font-size:1.3rem;font-weight:800">${esc(puzzleGoal(cfg.puzzle))}</p><div class="acts"><button class="btn pri" data-a="close" autofocus>Start</button></div>`);
 }
-function saveMatch() { if (!M || M.G.over || M.cfg.puzzle) return; store.set('db_save', JSON.stringify({snap: M.G.snap, decs: M.G.decs, cfg: M.cfg})); }
+function saveMatch() { if (!M || M.G.over || M.cfg.puzzle || M.cfg.online || M.rp) return; store.set('db_save', JSON.stringify({snap: M.G.snap, decs: M.G.decs, cfg: M.cfg, rec: M.rec})); }
 function resumeMatch() {
-  try { const j = JSON.parse(store.get('db_save')); const G = Game.resume(j.snap, j.decs, []); M = {G, cfg: j.cfg, busy: false, fresh: true, id: Date.now()}; resetStage(); $('#ticker').textContent = ''; show('game'); render(); pump(); }
+  try { const j = JSON.parse(store.get('db_save')); const G = Game.resume(j.snap, j.decs, []); M = {G, cfg: j.cfg, busy: false, fresh: true, id: Date.now()}; M.rec = j.rec && Array.isArray(j.rec.decs) ? j.rec : null; resetStage(); $('#ticker').textContent = ''; show('game'); render(); pump(); }
   catch (e) { store.del('db_save'); toTitle(); }
 }
 const speed = () => M && M.cfg.fast ? 0 : (P.opt.speed ?? 1);
 function pump() {
   const G = M.G;
-  if (G.over) { render(); return drama(() => finish()); }
+  if (G.over) { render(); onlPush(); return drama(() => finish()); }
   const q = G.req;
   if (M.cfg.puzzle && puzzleTurnsLeft(M.cfg.puzzle, G.S) <= 0) { render(); return finish(); }   // the puzzle's turns are used up
   render();
+  if (M.cfg.online) { onlPush(); if (q.p !== HUMAN) onlCheckAns(); return; }   // online (host): the other seat is your friend, not the CPU
   if (q.p === HUMAN) { coachFor(q); return; }
   M.busy = true;
   setTimeout(() => { if (!M || M.G !== G) return; const a = M.cfg.puzzle ? puzzleReply(G, M.cfg.puzzle, M.memo = M.memo || new Map()) : aiChoose(G, M.cfg.level); M.busy = false; answer(a); }, 520 * speed());
 }
-function answer(i) {
-  const G = M.G, S = G.S, n0 = S.log.length, pos0 = S.pos.slice(), fl0 = S.flights;
-  $('#coach').hidden = true; M.sub = null; M.insAt = null; if ($('#sheet').classList.contains('insight')) closeOv();
-  // Undo: remember where this choice was made, unless it (or anything since) turned up hidden information
-  const mark = !M.busy && G.req.p === HUMAN && S.cur === HUMAN ? {n: G.decs.length, rev: S.rev, turn: S.turn} : null;
-  G.answer(i);
-  if (mark && !G.over && S.turn === mark.turn && S.rev === mark.rev) (M.hist = M.hist || []).push(mark); else M.hist = [];
-  const fresh = S.log.slice(n0);
+/* What just happened, from the new log lines: the played-card splash, sounds, the Flight / Roost banner.
+   Returns how long (ms, at Normal speed) to let it show before the next thing. */
+function playFx(fresh) {
   let wait = 0;
   for (const e of fresh) {
     if (e.card && e.by !== HUMAN) { splash(e.card, e.m); wait = Math.max(wait, 950); SFX.card(); }
@@ -339,10 +386,23 @@ function answer(i) {
     if (/ bumps /.test(e.m)) SFX.bump(); else if (/ moves | teleports /.test(e.m)) SFX.move(); else if (/readies|depletes/.test(e.m)) SFX.gem();
     if (/^FLIGHT/.test(e.m)) { banner('Flight!'); SFX.flight(); wait = Math.max(wait, 1700); } else if (/^ROOST/.test(e.m)) { banner('Roost'); wait = Math.max(wait, 900); }
   }
+  if (fresh.length) $('#ticker').textContent = fresh.filter(e => !/^—/.test(e.m)).slice(-2).map(e => e.m).join(' ');
+  return wait;
+}
+function answer(i) {
+  if (M.cfg.online === 'guest') return onlGuestAnswer(i);   // online (guest): the choice goes to the host, who runs the game
+  const G = M.G, S = G.S, n0 = S.log.length, pos0 = S.pos.slice(), fl0 = S.flights;
+  $('#coach').hidden = true; M.sub = null; M.insAt = null; if ($('#sheet').classList.contains('insight')) closeOv();
+  // Undo: remember where this choice was made, unless it (or anything since) turned up hidden information
+  const mark = !M.busy && !M.cfg.online && G.req.p === HUMAN && S.cur === HUMAN ? {n: G.decs.length, rev: S.rev, turn: S.turn} : null;
+  if (M.rec) M.rec.decs.push(i);   // the replay: every choice of the match, in order
+  G.answer(i);
+  if (mark && !G.over && S.turn === mark.turn && S.rev === mark.rev) (M.hist = M.hist || []).push(mark); else M.hist = [];
+  const fresh = S.log.slice(n0);
+  let wait = playFx(fresh);
   if ((S.pos[0] !== pos0[0] || S.pos[1] !== pos0[1]) && (G.over || G.req && G.req.p !== HUMAN)) wait = Math.max(wait, 600);   // let the slide finish before the CPU acts
   if (G.over) wait = 0;   // the ending plays itself out
-  if (fresh.length) $('#ticker').textContent = fresh.filter(e => !/^—/.test(e.m)).slice(-2).map(e => e.m).join(' ');
-  saveMatch();
+  saveMatch(); if (M.cfg.online) onlPush();   // (the guest sees it as it happens, not after the pause)
   if (wait && speed()) { render(); M.busy = true; const G0 = G; setTimeout(() => { if (!M || M.G !== G0) return; M.busy = false; pump(); }, wait * speed()); } else pump();
 }
 let splashT = 0, bannerT = 0;
@@ -364,12 +424,12 @@ function knownOf(S, p) { const h = S.hand[p].slice(); return (S.known ? S.known[
 function barHtml(S, p) {
   const w = S.wiz[p], it = S.items[p].map(i => `<button class="cardb" data-a="zoomitem" data-id="${i}" data-peek="it_${i}" aria-label="${esc(ITEMS[i].n)}"><img src="${im('it_' + i)}" alt=""></button>`).join('');
   const hd = S.hackDown[p].length ? `<span class="lbl">${S.hackDown[p].length} Hack${S.hackDown[p].length > 1 ? 's' : ''} face down</span>` : '';
-  const seen = M.cfg.puzzle ? S.hand[p] : knownOf(S, p), hid = S.hand[p].length - seen.length;   // cards you have seen stay face-up
+  const seen = M.cfg.puzzle || M.cfg.open ? S.hand[p] : knownOf(S, p), hid = S.hand[p].length - seen.length;   // cards you have seen stay face-up
   const hand = p === HUMAN ? '' : seen.map(c => `<button class="cardb" data-a="zoomcard" data-id="${c}" data-peek="${c}" title="You know ${esc(nm(S, p))} holds this"><img src="${im(c)}" alt="${esc(ACTIONS[c].n)}"></button>`).join('') + (hid ? `<span class="backs" title="${hid} unknown card${hid > 1 ? 's' : ''}">${Array(hid).fill(`<img src="${im('back')}" alt="">`).join('')}</span>` : '');
   return `<button class="face" data-a="zoomwiz" data-id="${w}" data-peek="wz_${w}" aria-label="${esc(WIZ[w].n)}: read powers"><img src="${face(w)}" alt=""></button>
-    <div class="who"><b>${p === HUMAN ? 'You · ' : ''}${esc(WIZ[w].n)}</b><span class="lbl">${p === HUMAN ? esc(WIZ[w].title) : (M.cfg.oppName ? esc(M.cfg.oppName) + ' · ' : '') + (M.cfg.puzzle ? 'Puzzle opponent' : 'CPU · ' + LEVEL_NAMES[M.cfg.level] + (S.ed === 2 ? '' : ' · 1st Edition'))}</span></div>
+    <div class="who"><b>${p === HUMAN ? 'You · ' : ''}${esc(WIZ[w].n)}</b><span class="lbl">${p === HUMAN ? esc(WIZ[w].title) : (M.cfg.oppName ? esc(M.cfg.oppName) + ' · ' : '') + (M.cfg.oppLabel ? esc(M.cfg.oppLabel) : M.cfg.online ? 'Online opponent' : M.cfg.puzzle ? 'Puzzle opponent' : 'CPU · ' + LEVEL_NAMES[M.cfg.level]) + (S.ed === 2 || M.cfg.puzzle ? '' : ' · 1st Edition')}</span></div>
     ${gemsHtml(S, p)}${hd}<div class="oppinfo">${hand}</div><div class="items">${it}</div>
-    ${p === HUMAN ? `<button class="iconbtn" data-a="undo" id="undobtn" title="Take back your last choice. Not available once something hidden has been revealed." ${M.hist && M.hist.length && !M.busy && !M.G.over && M.G.req && M.G.req.p === HUMAN ? '' : 'disabled'}>Undo</button><button class="iconbtn" data-a="tip" id="tipbtn" ${M.cfg.tips ? '' : 'hidden'}>Tip</button><button class="iconbtn" data-a="log">Log</button><button class="iconbtn" data-a="menu">Menu</button>` : ''}`;
+    ${p === HUMAN ? `<button class="iconbtn" data-a="undo" id="undobtn" title="Take back your last choice. Not available once something hidden has been revealed." ${M.cfg.online || M.rp ? 'hidden' : ''} ${M.hist && M.hist.length && !M.busy && !M.G.over && M.G.req && M.G.req.p === HUMAN ? '' : 'disabled'}>Undo</button><button class="iconbtn" data-a="tip" id="tipbtn" ${M.cfg.tips && !M.cfg.online && !M.rp ? '' : 'hidden'}>Tip</button><button class="iconbtn" data-a="log">Log</button><button class="iconbtn" data-a="menu">Menu</button>` : ''}`;
 }
 function render() {
   if (!M) return;
@@ -396,7 +456,7 @@ function render() {
   const dz = S.dragon === 0 ? 0 : 76.19;
   b += `<div class="zone threat" style="left:${dz}%">THREATENED</div><div class="zone exit" style="left:${76.19 - dz}%">EXIT</div>`;
   for (let t = 0; t <= LAST; t++) { const c = tiles[t]; b += `<button class="tile${c ? ' can' + (q.verb === 'bump' ? '' : ' mv') : ''}" style="left:${t * 4.762}%" ${c ? `data-a="ans" data-i="${c.i}"` : 'tabindex="-1" disabled'} aria-label="${esc(tileName(t))}">${c && c.label ? `<span class="tl">${esc(c.label)}</span>` : ''}</button>`; }
-  for (const p of [1, 0]) b += `<div class="tok ${p ? 'opp' : 'me'}${S.away[p] ? ' off' : ''}" data-a="tok" data-id="${S.wiz[p]}" data-peek="wz_${S.wiz[p]}" style="left:${(S.pos[p] + .5) * 4.762}%"><img src="${face(S.wiz[p])}" alt=""><span class="you">${p ? 'CPU' : 'YOU'}</span></div>`;
+  for (const p of [1, 0]) b += `<div class="tok ${p ? 'opp' : 'me'}${S.away[p] ? ' off' : ''}" data-a="tok" data-id="${S.wiz[p]}" data-peek="wz_${S.wiz[p]}" style="left:${(S.pos[p] + .5) * 4.762}%"><img src="${face(S.wiz[p])}" alt=""><span class="you">${p ? (M.cfg.online || M.cfg.human ? 'OPP' : 'CPU') : 'YOU'}</span></div>`;
   const br = $('#bridge');
   if (!br.dataset.init) { br.style.backgroundImage = `url(${im('bridge')})`; br.dataset.init = 1; $('#dragon .dface img').src = face('dragon'); }
   // keep token elements alive so they animate between tiles
@@ -438,8 +498,9 @@ function render() {
   // prompt
   const lg = $('#loglive'); if (lg.dataset.n !== String(S.log.length) || lg.dataset.g !== String(M.id)) { lg.innerHTML = logHtml(S.log); lg.dataset.n = S.log.length; lg.dataset.g = M.id; lg.scrollTop = lg.scrollHeight; }
   const qe = $('#q'), oe = $('#opts');
+  if (M.rp) return rpBar(qe, oe);   // watching a replay: the controls sit where the choices would be
   if (G.over) { qe.textContent = ''; oe.innerHTML = ''; return; }
-  if (!q) { qe.className = 'q cpu'; qe.textContent = G.req && G.req.p !== HUMAN ? `${nm(S, 1)} is thinking…` : '…'; oe.innerHTML = ''; return; }
+  if (!q) { qe.className = 'q cpu'; qe.textContent = G.req && G.req.p !== HUMAN ? `${nm(S, 1)} is ${M.cfg.online ? 'choosing' : 'thinking'}…` : M.cfg.online ? `Waiting for ${nm(S, 1)}…` : '…'; oe.innerHTML = ''; return; }
   qe.className = 'q'; qe.textContent = q.prompt;
   const stripBtn = s => `<button class="cardb sel" data-a="strip" data-ci="${s.i}" data-peek="${s.o.item ? 'it_' + s.o.item : s.o.hack ? 'hk_' + s.o.hack : s.o.card}" aria-label="${esc(s.o.label)}"><img src="${cardImg(s.o.item ? 'item' : s.o.hack ? 'hack' : 'card', s.o.card || s.o.item || s.o.hack)}" alt=""></button>`;
   let h = '';
@@ -472,7 +533,7 @@ function logHtml(L) { let h = ''; for (const e of L) h += /^—/.test(e.m) ? `<d
 /* hover preview (mouse only) */
 function hidePeek() { $('#peek').style.display = 'none'; }
 document.addEventListener('mouseover', ev => {
-  const b = ev.target.closest && ev.target.closest('[data-peek]'); if (!b || drag && drag.on || !matchMedia('(hover:hover)').matches) return;
+  const b = ev.target.closest && ev.target.closest('[data-peek]'); if (!b || drag && drag.on || !matchMedia('(hover:hover)').matches || document.body.classList.contains('pad')) return;   // (not while a controller or the keyboard is driving)
   const pk = $('#peek'); pk.querySelector('img').src = im(b.dataset.peek); pk.style.display = 'block';
   const ar = $('#app').getBoundingClientRect(), r0 = b.getBoundingClientRect(), r = {left: r0.left - ar.left, right: r0.right - ar.left, top: r0.top - ar.top, width: r0.width, height: r0.height};
   const pw = pk.offsetWidth, ph = pw * 600 / 440, vw = ar.width, vh = ar.height;
@@ -501,6 +562,7 @@ function undo() {   // take back your last choice this turn (only offered while 
   const G = M.G; if (M.busy || G.over || !M.hist || !M.hist.length || !G.req || G.req.p !== HUMAN) return;
   const h = M.hist.pop(), G2 = Game.resume(G.snap, G.decs.slice(0, h.n), G.S.log.slice(0, G.logAt));
   if (!G2.req || G2.req.p !== HUMAN || G2.S.rev !== h.rev) { M.hist = []; return; }   // should not happen: replays are exact
+  if (M.rec) M.rec.decs.length = Math.max(0, M.rec.decs.length - (G.decs.length - h.n));
   M.G = G2; M.sub = null; $('#ticker').textContent = 'Undone.'; $('#coach').hidden = true; saveMatch(); render();
 }
 /* Keyframes for a hop from (x0,y0) to (x1,y1) (px offsets from where the element sits), rising `lift` px on the way. */
@@ -584,8 +646,9 @@ const levelForRank = r => r <= 2 ? 'easy' : r <= 5 ? 'normal' : r <= 8 ? 'hard' 
 function grant(id, out) { if (!P.ach[id]) { P.ach[id] = todayKey(); out.push(ACH.find(a => a[0] === id)); } }
 function dailyStreak() { let n = 0; const d = new Date(); for (;;) { const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); if (P.daily[k] === 'W') n++; else if (n || k !== todayKey()) break; d.setDate(d.getDate() - 1); if (n > 400) break; } return n; }
 function finish() {
+  if (M.cfg.online) return onlFinish();   // online matches have their own ending (and are not counted in your stats)
   const S = M.G.S, cfg = M.cfg, won = cfg.puzzle ? puzzleOk(cfg.puzzle, S) : S.winner === HUMAN, got = [];
-  store.del('db_save');
+  store.del('db_save'); const rid = rpSave();
   if (window.TEST_FAST || (S.reason !== 'escape' && S.reason !== 'pounce') || S.winner == null) (won ? SFX.win : SFX.lose)();   // (otherwise the ending played it)
   let extra = '', acts = '<button class="btn pri" data-a="again" autofocus>Play again</button>';
   if (cfg.puzzle) {
@@ -624,7 +687,7 @@ function finish() {
   const head = cfg.puzzle ? (won ? 'Puzzle solved!' : 'Not this time') : !dec ? 'Stalemate' : S.reason === 'resign' ? 'You resigned' : S.reason === 'escape' ? `${nW} ESCAPES!` : `${nL} was POUNCED!`;
   const sub = cfg.puzzle ? '' : !dec ? 'Nobody got off the bridge.' : S.reason === 'resign' ? 'The match counts as a loss.' : `<b>${nW} WINS!</b> ${won ? 'That’s you.' : 'Better luck next time.'}`;
   const M0 = M;
-  setTimeout(() => M === M0 && openOv(`<h2>${head}</h2><p style="margin:0">${sub} <span class="lbl">${cfg.puzzle ? '' : S.turn + ' turns.'}</span></p>${extra}${got.map(a => `<div class="ach"><i>${a[1]}</i><div><b>Achievement: ${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}<div class="acts">${acts}<button class="btn" data-a="log">Match log</button><button class="btn" data-a="totitle">Title</button></div>`), speed() ? 250 : 140);
+  setTimeout(() => M === M0 && openOv(`<h2>${head}</h2><p style="margin:0">${sub} <span class="lbl">${cfg.puzzle ? '' : S.turn + ' turns.'}</span></p>${extra}${got.map(a => `<div class="ach"><i>${a[1]}</i><div><b>Achievement: ${a[2]}</b><br><span class="lbl">${a[3]}</span></div></div>`).join('')}<div class="acts">${acts}${rid ? `<button class="btn" data-a="rpwatch" data-id="${rid}">Watch replay</button>` : ''}<button class="btn" data-a="log">Match log</button><button class="btn" data-a="totitle">Title</button></div>`), speed() ? 250 : 140);
 }
 
 /* ---------- modes ---------- */
@@ -726,7 +789,8 @@ function optionsSheet() {
     <div class="row"><b>CPU animation</b><span class="seg">${[[1.6, 'Slow'], [1, 'Normal'], [.5, 'Fast'], [0, 'Instant']].map(([v, l]) => `<button class="btn sm" data-a="setspeed" data-v="${v}" aria-pressed="${o.speed === v}">${l}</button>`).join('')}</span></div>
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-ed2o" data-t="ed2" ${o.ed2 ? 'checked' : ''}> <b>2nd Edition rules</b> <span class="lbl">for new matches; a match in progress keeps its edition</span></label>
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-mview" data-t="mview" ${o.mview ? 'checked' : ''}> <b>Mobile View</b> <span class="lbl">play in a phone-shaped portrait layout</span></label>
-    <label class="row" style="gap:6px"><input type="checkbox" id="opt-sound" data-t="sound" ${o.sound ? 'checked' : ''}> <b>Sound</b></label>
+    <div class="row"><b>Sound</b><button class="btn sm" data-a="mute" id="mutebtn" aria-pressed="${!o.sound}">${o.sound ? '🔊 On' : '🔇 Muted'}</button>
+      <label class="row volrow${o.sound ? '' : ' off'}" style="gap:8px">Volume <input type="range" id="opt-vol" min="0" max="100" step="5" value="${Math.round(100 * (o.vol ?? 0.7))}" aria-label="Volume"><span id="volpct" class="lbl">${Math.round(100 * (o.vol ?? 0.7))}%</span></label></div>
     <label class="row" style="gap:6px"><input type="checkbox" id="opt-onetap" data-t="oneTap" ${o.oneTap ? 'checked' : ''}> <b>One-tap cards</b> <span class="lbl">play a card without the enlarged preview first</span></label>
     ${SYNC.box()}${UPD.box()}
     <div class="row"><button class="btn sm" data-a="wipe1">Erase all progress…</button></div>
@@ -739,14 +803,14 @@ function logSheet() {
 }
 function menuSheet() {
   openOv(`<h2>Menu</h2><div class="tmenu" style="margin:0 auto"><button class="tbtn pri" data-a="close">Back to the match</button><button class="tbtn" data-a="zoomimg" data-id="ref" data-n="Turn reference">Turn reference card</button><button class="tbtn" data-a="rulebook">Rulebook</button><button class="tbtn" data-a="library">Card Library</button><button class="tbtn" data-a="options">Options</button>
-    ${M.cfg.puzzle ? '<button class="tbtn" data-a="again">Restart puzzle</button><button class="tbtn" data-a="totitle">Quit to title</button>' : '<button class="tbtn" data-a="totitle">Save &amp; quit to title</button><button class="tbtn" data-a="resign">Resign</button>'}</div>`);
+    ${M.rp ? '<button class="tbtn" data-a="totitle">Exit replay</button>' : M.cfg.online ? '<button class="tbtn" data-a="olquit">Leave the match</button>' : M.cfg.puzzle ? '<button class="tbtn" data-a="again">Restart puzzle</button><button class="tbtn" data-a="totitle">Quit to title</button>' : '<button class="tbtn" data-a="totitle">Save &amp; quit to title</button><button class="tbtn" data-a="resign">Resign</button>'}</div>`);
 }
-function toTitle() { try { UPD.titleCheck(); } catch (e) {} M = null; closeOv(); $('#contbtn').hidden = !store.get('db_save'); $('#playbtn').classList.toggle('pri', !store.get('db_save')); show('title'); }
+function toTitle() { try { UPD.titleCheck(); } catch (e) {} rpStop(); if (ONL.on) onlLeave(); M = null; closeOv(); muteDraw(); $('#contbtn').hidden = !store.get('db_save'); $('#playbtn').classList.toggle('pri', !store.get('db_save')); show('title'); }
 
 /* ---------- input ---------- */
 document.addEventListener('click', ev => {
   if (Date.now() - dragAt < 350) return;   // the click that ends a drag
-  const b = ev.target.closest('[data-a]'); if (!b) { if (ev.target.id === 'ov') closeOv(); return; }
+  const b = ev.target.closest('[data-a]'); if (!b) { if (ev.target.id === 'ov' && !$('#sheet').classList.contains('lock')) closeOv(); return; }   // (a "lock" sheet, like the online lobby, only closes by its own buttons)
   hidePeek();
   const a = b.dataset.a, v = b.dataset.v, id = b.dataset.id;
   if (a === 'ans') { if (M && !M.busy) answer(+b.dataset.i); return; }
@@ -754,6 +818,26 @@ document.addEventListener('click', ev => {
   switch (a) {
     case 'close': closeOv(); break;
     case 'insight': insightSheet(); break;
+    case 'mute': P.opt.sound = !P.opt.sound; saveProf(); muteDraw(); if (P.opt.sound) setTimeout(() => SFX.gem(), 30); if (b.id === 'mutebtn') optionsSheet(); break;
+    case 'exit': exitGame(); break;
+    case 'replays': replaysSheet(); break;
+    case 'rpwatch': rpOpen(id); break;
+    case 'rpshare': rpShareSheet(id); break;
+    case 'rpcopy': rpCopy(id); break;
+    case 'rpfile': rpDownload(id); break;
+    case 'rpdel': rpDelete(id); break;
+    case 'rpimport': rpImportSheet(); break;
+    case 'rpimportgo': rpImportText(($('#rpcode') || {}).value || ''); break;
+    case 'rpgo': rpCmd(v); break;
+    case 'online': onlMenu(); break;
+    case 'olhost': onlHost(); break;
+    case 'oljoin': onlJoin(($('#olcode') || {}).value); break;
+    case 'olwiz': onlPick(v); break;
+    case 'olready': onlReady(); break;
+    case 'olcopy': onlCopy(); break;
+    case 'olcancel': onlLeave(); closeOv(); toTitle(); break;
+    case 'olagain': onlAgain(); break;
+    case 'olquit': openOv('<h2>Leave this match?</h2><p>Your friend will be told you left.</p><div class="acts"><button class="btn" data-a="olcancel">Leave</button><button class="btn pri" data-a="close" autofocus>Keep playing</button></div>'); break;
     case 'sub': if (M) { M.sub = v || null; render(); } break;
     case 'zoomok': { const f = zoomCb; closeOv(); if (f) f(); break; }
     case 'hand': case 'zoomcard': zoomThing(id in ACTIONS ? 'card' : 'card', id); break;
@@ -808,8 +892,20 @@ document.addEventListener('click', ev => {
     case 'updgo': if (!$('#sheet #updbox')) optionsSheet(); UPD.go(); break;
   }
 });
-document.addEventListener('change', ev => { const t = ev.target.dataset && ev.target.dataset.t; if (!t) return; P.opt[t] = ev.target.checked; saveProf(); if (t === 'mview') applyView(); if (t === 'ed2' && !M) { if (!$('#setup').hidden) drawSetup(); if ($('#ov').classList.contains('show')) optionsSheet(); } });
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#ov').classList.contains('show')) closeOv(); else if (M && !M.G.over) menuSheet(); } });
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (t.id === 'opt-vol') { P.opt.vol = +t.value / 100; const l = $('#volpct'); if (l) l.textContent = t.value + '%'; saveProf(); clearTimeout(muteDraw.t); muteDraw.t = setTimeout(() => SFX.gem(), 120); }
+  if (t.id === 'rpseek') rpSeek(+t.value);
+});
+document.addEventListener('change', ev => { if (ev.target.id === 'rpfilein') return rpImportFile(ev.target.files && ev.target.files[0]); const t = ev.target.dataset && ev.target.dataset.t; if (!t) return; P.opt[t] = ev.target.checked; saveProf(); if (t === 'mview') applyView(); if (t === 'ed2' && !M) { if (!$('#setup').hidden) drawSetup(); if ($('#ov').classList.contains('show')) optionsSheet(); } });
+function muteDraw() { const b = $('#tmute'); if (!b) return; b.textContent = P.opt.sound ? '🔊' : '🔇'; b.setAttribute('aria-pressed', String(!P.opt.sound)); b.title = P.opt.sound ? 'Mute sound' : 'Turn sound on'; }
+/* Exit: only the desktop app and the Android app have somewhere to exit to. */
+const canExit = () => !!(window.DBDesk && DBDesk.quit) || !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+function exitGame() { try { if (window.DBDesk && DBDesk.quit) DBDesk.quit(); else if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App) Capacitor.Plugins.App.exitApp(); } catch (e) {} }
+
+/*REPLAY*/
+
+/*ONLINE*/
 
 /* ---------- account + cross-device sync (Supabase), the same way Spellstorm does it ----------
    Signing in is optional. The profile (stats, Ranked ratings, achievements, trophies, puzzles, Dailies, a Tournament in
@@ -819,7 +915,7 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { if ($('#
    Dragon Bridge has its own Supabase project ("dragonbridge"), so its accounts are separate from Spellstorm's.
    The key below is the publishable one: it is meant to be shipped, and each player can only reach their own row. */
 const SUPA = Object.assign({url: 'https://niqyeqeqntwkrbkgnidj.supabase.co', key: 'sb_publishable_PFVNPc82dBxBX4zle9s-0A_Xekp2lJt', table: 'dragonbridge_saves'}, window.DB_SUPA_CFG || {});
-const OPT_LOCAL = ['mview', 'sound'];   // these stay per device
+const OPT_LOCAL = ['mview', 'sound', 'vol'];   // these stay per device
 const SYNC = (() => {
   const AKEY = 'db_auth', YKEY = 'db_sync';
   const S = {on: !!window.DB_SYNC, ses: null, state: 'idle', last: 0, err: '', timer: null, chain: Promise.resolve()};
@@ -998,10 +1094,10 @@ function acctNewPw() {
   SYNC.setPassword(pw).then(() => { closeOv(); toast('Password changed. You’re signed in.'); SYNC.run(); }).catch(e => toast(e.msg));
 }
 
-/* ---------- in-app updates: the Android app and the Windows .exe (the browser versions are always current) ----------
+/* ---------- in-app updates: the Android app, the Windows .exe and the Linux AppImage (the browser versions are always current) ----------
    The game asks GitHub for the latest release; if it is newer, the title screen shows "Update Available!". The Android
    app downloads the new APK and opens Android's installer (branding/java/UpdaterPlugin.java); the Windows .exe replaces
-   itself and restarts (desktop/main.js). */
+   itself and restarts, and so does the Linux AppImage on a Steam Deck (desktop/main.js). */
 const UPD = (() => {
   const API = 'https://api.github.com/repos/keithburgun/dragonbridge/releases/latest', CKEY = 'db_updchk';
   const S = {kind: null, cur: '', latest: '', asset: null, state: 'idle', pct: 0, err: ''};
@@ -1020,7 +1116,7 @@ const UPD = (() => {
     if (!S.kind || S.state === 'downloading') return; S.state = 'checking'; S.err = ''; redraw();
     try {
       const r = await fetch(API, {headers: {Accept: 'application/vnd.github+json'}, cache: 'no-store'}); if (!r.ok) throw new Error(r.status); const j = await r.json();
-      const ext = S.kind === 'android' ? '.apk' : '.exe', a = (j.assets || []).find(x => x.name.endsWith(ext));
+      const ext = S.kind === 'android' ? '.apk' : S.kind === 'linux' ? '.AppImage' : '.exe', a = (j.assets || []).find(x => x.name.endsWith(ext));
       S.latest = String(j.tag_name || '').replace(/^v/, ''); S.asset = a ? a.browser_download_url : null;
       S.state = S.asset && newer(vn(S.latest), vn(S.cur)) ? 'available' : 'current';
     } catch (e) { S.state = quiet ? 'idle' : 'error'; S.err = 'Couldn’t check for updates. Check your internet connection and try again.'; }
@@ -1073,11 +1169,17 @@ applyView();
 $('#twords').src = im('title_logo');
 document.documentElement.style.setProperty('--bgimg', `url(${IMG.bg})`);
 try { if (typeof APP_VERSION === 'string') $('#ver').textContent = '· ' + APP_VERSION; } catch (e) {}
+$('#exitbtn').hidden = !canExit(); $('#onlbtn').hidden = !onlAvail();
 toTitle();
+onlBoot();
 if (window.DB_SYNC) {
   setTimeout(() => { try { acctRecovery(); } catch (e) {} SYNC.run(); }, 900);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') SYNC.run(); else if (Date.now() - SYNC.S.last > 60000) SYNC.run(); });
   setInterval(() => SYNC.render(), 20000);
 }
 UPD.init().then(k => { if (k) setTimeout(() => UPD.titleCheck(), 800); });   // check on start (the title screen re-checks whenever it opens)
+/* Steam Deck (Game Mode): there is no keyboard, so a tap on a text box brings up the game's own on-screen keyboard. */
+if (window.DBDesk && DBDesk.info) DBDesk.info().then(i => { if (!i || !i.deck) return; document.body.classList.add('deck'); document.addEventListener('focusin', e => { try { DBPAD.osk(e.target); } catch (err) {} }); }).catch(() => {});
+
+/*PAD*/
 </script>

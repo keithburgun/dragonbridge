@@ -1,6 +1,6 @@
 name: Upload to itch.io
 
-# Re-uploads the latest GitHub Release (Android, Windows and browser builds) to itch.io without rebuilding.
+# Re-uploads the latest GitHub Release (Android, Windows, Linux and browser builds) to itch.io without rebuilding.
 # Run it from Actions → Upload to itch.io → Run workflow, for example right after adding the BUTLER_API_KEY secret.
 on:
   workflow_dispatch:
@@ -26,4 +26,4 @@ jobs:
           echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"; echo "Latest release: $TAG"
           gh release download "$TAG" --repo "${{ github.repository }}" --dir out --pattern 'DragonBridge-*'
       - name: Upload to itch.io
-        run: bash .github/scripts/itch_upload.sh "$(ls out/*.apk | head -1)" "$(ls out/*.exe | head -1)" "$(ls out/*-web.zip | head -1)" "$VERSION"
+        run: bash .github/scripts/itch_upload.sh "$(ls out/*.apk | head -1)" "$(ls out/*.exe | head -1)" "$(ls out/*-web.zip | head -1)" "$VERSION" "$(ls out/*.AppImage 2>/dev/null | head -1)"

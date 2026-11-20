@@ -5,13 +5,21 @@ const fs = require('fs');
 const https = require('https');
 const { spawn } = require('child_process');
 
+// Sounds can start from a controller press (browsers only count mouse and keyboard as "the player did something").
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Steam Deck (Game Mode) and Steam Big Picture: start fullscreen. Anywhere else: --fullscreen does the same; F11 toggles it.
+const DECK = process.env.SteamDeck === '1';
+const FULLSCREEN = DECK || process.env.SteamTenfoot === '1' || process.argv.includes('--fullscreen');
+ipcMain.handle('app:info', () => ({ deck: DECK, fullscreen: FULLSCREEN, platform: process.platform, version: app.getVersion() }));
+ipcMain.handle('app:quit', () => { setTimeout(() => app.quit(), 50); return true; });   // the title screen's Exit button
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1366, height: 820, minWidth: 360, minHeight: 600,
     backgroundColor: '#2a0710',
     title: 'Dragon Bridge',
     icon: path.join(__dirname, process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
-    fullscreen: process.argv.includes('--fullscreen'),
+    fullscreen: FULLSCREEN,
     autoHideMenuBar: true,
     show: false,
     webPreferences: { contextIsolation: true, sandbox: true, preload: path.join(__dirname, 'preload.js') }
@@ -28,8 +36,9 @@ function createWindow() {
 }
 // ---------- in-app updates ----------
 // Windows: the portable .exe is replaced in place (same file name, so shortcuts keep working), restarted, and the old copy deleted.
+// Linux / Steam Deck: the AppImage is replaced in place (same file name, so a Steam shortcut keeps working) and restarted.
 const ALLOWED = process.env.DRAGONBRIDGE_UPDATE_TEST_PREFIX || 'https://github.com/keithburgun/dragonbridge/releases/download/';   // (the variable is only for automated tests)
-const updKind = () => process.platform === 'win32' && process.env.PORTABLE_EXECUTABLE_FILE ? 'win' : null;   // only the portable .exe can replace itself
+const updKind = () => process.platform === 'win32' && process.env.PORTABLE_EXECUTABLE_FILE ? 'win' : process.platform === 'linux' && process.env.APPIMAGE ? 'linux' : null;   // only the portable .exe and the AppImage can replace themselves
 function fetchTo(url, file, onPct, hops = 0) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': 'DragonBridge-Desktop' } }, res => {
@@ -53,7 +62,17 @@ ipcMain.handle('upd:can', () => ({ kind: updKind(), version: app.getVersion() })
 ipcMain.handle('upd:go', async (e, url) => {
   const kind = updKind();
   if (!kind) throw new Error('This copy of Dragon Bridge can’t update itself.');
-  if (typeof url !== 'string' || !url.startsWith(ALLOWED) || !url.endsWith('.exe')) throw new Error('That isn’t a Dragon Bridge update.');
+  if (typeof url !== 'string' || !url.startsWith(ALLOWED) || !url.endsWith(kind === 'win' ? '.exe' : '.AppImage')) throw new Error('That isn’t a Dragon Bridge update.');
+  if (kind === 'linux') {
+    const img = process.env.APPIMAGE, part = img + '.download';
+    await fetchTo(url, part, p => { if (!e.sender.isDestroyed()) e.sender.send('upd:progress', p); });
+    fs.chmodSync(part, 0o755);
+    fs.renameSync(part, img);                  // the running copy keeps working from its own (now unlinked) file
+    app.releaseSingleInstanceLock();
+    spawn(img, process.argv.slice(1).filter(a => !a.startsWith('--type=')), { detached: true, stdio: 'ignore' }).unref();
+    setTimeout(() => app.quit(), 400);
+    return true;
+  }
   const send = p => { if (!e.sender.isDestroyed()) e.sender.send('upd:progress', p); };
   // Replace the player's own Dragon Bridge .exe in place: same file, same name, same folder, so shortcuts keep working.
   // Never leave a second copy next to it. Steps:

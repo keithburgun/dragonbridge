@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Upload Dragon Bridge to itch.io with butler.  Usage: itch_upload.sh <apk> <exe> <html-zip> <version>
+# Upload Dragon Bridge to itch.io with butler.  Usage: itch_upload.sh <apk> <exe> <html-zip> <version> [appimage]
 # Needs BUTLER_API_KEY and ITCH_GAME (user/game). Every butler error is reported as a GitHub annotation
 # and in the job summary, so problems are visible without opening the raw log.
 set -u
-APK="$1"; EXE="$2"; HTML="$3"; VERSION="$4"; FAILED=0
+APK="$1"; EXE="$2"; HTML="$3"; VERSION="$4"; APPIMAGE="${5:-}"; FAILED=0
 summary(){ echo "$1" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; }
 if [ ! -x ./butler/butler ]; then
   curl -sSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default && unzip -qo butler.zip -d butler && chmod +x butler/butler || { echo "::error title=itch.io::Couldn't download butler"; exit 1; }
@@ -26,6 +26,7 @@ push(){ local file="$1" ch="$2"
 push "$APK" android
 push "$EXE" windows
 push "$HTML" html5
+push "$APPIMAGE" linux
 ./butler/butler status "$ITCH_GAME" 2>&1 | tee /tmp/itch_status.txt
 summary ""; summary '```'; cat /tmp/itch_status.txt >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; summary '```'
 exit $FAILED

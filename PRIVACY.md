@@ -1,19 +1,23 @@
 # Dragon Bridge Privacy Policy
 
-**Keith Burgun Games** · Effective November 18, 2026
+**Keith Burgun Games** · Effective November 20, 2026
 Contact: [keithburgungames@gmail.com](mailto:keithburgungames@gmail.com)
 
-This policy covers the Dragon Bridge digital game on all platforms: itch.io, Android, Windows and the web version. In short, Dragon Bridge stores your progress on your own device. It contains no ads, no analytics and no tracking, and we never sell your data.
+This policy covers the Dragon Bridge digital game on all platforms: itch.io, Android, Windows, Linux (including the Steam Deck) and the web version. In short, Dragon Bridge stores your progress on your own device. It contains no ads, no analytics and no tracking, and we never sell your data.
 
 ## What stays on your device
 
-Your profile, settings, achievements, puzzle progress, Ranked ratings and any match in progress are saved locally on your device. We do not receive any of it unless you use one of the optional features below.
+Your profile, settings, achievements, puzzle progress, Ranked ratings, recorded replays and any match in progress are saved locally on your device. We do not receive any of it unless you use one of the optional features below.
 
 ## Optional features that send data
 
 **Account sync (optional).** If you choose to sign in, you give an email address and a password. The account keeps your progress in sync across devices. We store your email address and your save data: stats, Ranked ratings, achievements, puzzle and Daily Challenge results, and settings. This runs on [Supabase](https://supabase.com/privacy), which acts as our data processor. Passwords are handled by Supabase's authentication service, and we never see them. If you don't sign in, nothing is sent.
 
-**Update checks (Android and Windows versions only).** Before telling you about a new version, the game asks GitHub for the latest release number, and downloads the update from GitHub if you choose to install it. GitHub sees your IP address, as with any web request.
+**Online play (optional).** Online matches connect the two players directly (peer-to-peer). To find each other, both games briefly contact a public matchmaking server run by [PeerJS](https://peerjs.com). That server, and the other player, can see your IP address, as with any direct connection. The game sends the other player only what is on the table and your choices in the match; no account, name or email is involved. If you don't use Play Online, none of this happens.
+
+**Replays you share.** A replay leaves your device only if you copy its code or save its file and send it to someone yourself. It contains the cards and moves of that match and nothing about you.
+
+**Update checks (Android, Windows and Linux versions only).** Before telling you about a new version, the game asks GitHub for the latest release number, and downloads the update from GitHub if you choose to install it. GitHub sees your IP address, as with any web request.
 
 ## What we don't do
 

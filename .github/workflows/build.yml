@@ -1,7 +1,7 @@
 name: Build Dragon Bridge
 
-# Builds the browser version, the Android APK and the Windows .exe from source/, publishes them as a GitHub Release,
-# and uploads all three to itch.io. Runs on every change to main (except README-type edits), or by hand from
+# Builds the browser version, the Android APK, the Windows .exe and the Linux AppImage (Steam Deck) from source/,
+# publishes them as a GitHub Release, and uploads all four to itch.io. Runs on every change to main (except README-type edits), or by hand from
 # Actions → Build Dragon Bridge → Run workflow. A hand-started run on another branch only builds (no release, no upload).
 on:
   push:
@@ -38,6 +38,7 @@ jobs:
           node source/tests/known.js
           node source/tests/ed2.js
           node source/tests/puzzle_draws.js
+          node source/tests/ai_sense.js
       - uses: actions/upload-artifact@v4
         with:
           name: web
@@ -148,10 +149,40 @@ jobs:
           retention-days: 3
           path: desktop/dist/DragonBridge-${{ env.VERSION }}.exe
 
+  linux:
+    name: Linux AppImage (Steam Deck)
+    needs: [web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Copy the game into the desktop app
+        run: |
+          mkdir -p desktop/app
+          cp www/index.html desktop/app/index.html
+      - name: Install packages
+        working-directory: desktop
+        run: |
+          npm ci
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+      - name: Build DragonBridge.AppImage
+        working-directory: desktop
+        run: npx electron-builder --linux AppImage --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          retention-days: 3
+          path: desktop/dist/DragonBridge-${{ env.VERSION }}.AppImage
+
   release:
     name: Publish release and upload to itch.io
     if: github.ref == 'refs/heads/main'
-    needs: [web, android, windows]
+    needs: [web, android, windows, linux]
     runs-on: ubuntu-latest
     env:
       BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}                                # itch.io API key (repo secret)
@@ -161,19 +192,19 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: art
-      - name: Collect the three builds
+      - name: Collect the four builds
         run: |
           mkdir out
-          cp art/android/*.apk art/windows/*.exe out/
+          cp art/android/*.apk art/windows/*.exe art/linux/*.AppImage out/
           cp art/web/source/dist/dragonbridge-web.zip "out/DragonBridge-$VERSION-web.zip"
           ls -la out
       - name: Publish the GitHub Release
         run: |
           gh release create "$TAG" out/* --repo "${{ github.repository }}" --target "${{ github.sha }}" --latest \
             --title "Dragon Bridge $VERSION" \
-            --notes "Built from commit ${{ github.sha }}. **DragonBridge-$VERSION.apk** for Android, **DragonBridge-$VERSION.exe** for Windows, **DragonBridge-$VERSION-web.zip** to play in a browser (unzip and open index.html)."
+            --notes "Built from commit ${{ github.sha }}. **DragonBridge-$VERSION.apk** for Android, **DragonBridge-$VERSION.exe** for Windows, **DragonBridge-$VERSION.AppImage** for Linux and the Steam Deck, **DragonBridge-$VERSION-web.zip** to play in a browser (unzip and open index.html)."
       - name: Upload to itch.io
         run: |
           if [ -z "$BUTLER_API_KEY" ]; then
             echo "::warning title=itch.io upload skipped::Add the BUTLER_API_KEY secret in this repo's settings (see README). The builds are on the GitHub Release."; exit 0; fi
-          bash .github/scripts/itch_upload.sh "out/DragonBridge-$VERSION.apk" "out/DragonBridge-$VERSION.exe" "out/DragonBridge-$VERSION-web.zip" "$VERSION"
+          bash .github/scripts/itch_upload.sh "out/DragonBridge-$VERSION.apk" "out/DragonBridge-$VERSION.exe" "out/DragonBridge-$VERSION-web.zip" "$VERSION" "out/DragonBridge-$VERSION.AppImage"
