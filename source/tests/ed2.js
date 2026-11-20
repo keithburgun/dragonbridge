@@ -73,4 +73,17 @@ for (const keep of [true, false]) {
   if (keep) { pick(G, o => o.id === 'no'); assert.equal(G.req.kind, 'item'); G.answer(0); while (S.items[0].length === 0) G.answer(0); assert.equal(S.items[0].length, 1); }
   else { pick(G, o => o.card === 'fireball'); assert.equal(S.hand[1].length, 3); assert.equal(S.items[0].length, 0); }
 }
+// Fireball: its Gem is a cost, paid without asking; with no ready Gem it cannot be played (both editions)
+for (const ed of [2, 1]) {
+  G = setup(['derby', 'gelf'], ['fireball', 'soda', 'step', 'hop'], {ed, pre: S => { S.ready[0] = 1; S.pos = [9, 11]; }}); S = G.S;
+  pick(G, o => o.card === 'fireball'); assert.equal(S.ready[0], 0, 'the Gem is depleted on playing it'); assert(G.req.kind === 'tile' && G.req.verb === 'bump' && /Bump Gelf 5/.test(G.req.prompt), 'straight to the Bump: ' + G.req.prompt);
+  G = setup(['derby', 'gelf'], ['fireball', 'soda', 'step', 'hop'], {ed, pre: S => { S.ready[0] = 0; }});
+  assert(!has(G, o => o.card === 'fireball') && has(G, o => o.card === 'soda'), 'no Fireball without a ready Gem');
+  pick(G, o => o.card === 'step'); while (G.req.kind === 'tile') G.answer(0); assert(/Step: play another/.test(G.req.prompt) && !has(G, o => o.card === 'fireball'), 'nor after Step');
+  // a hand of nothing but a Fireball you cannot pay for: the Action Phase is skipped
+  G = setup(['derby', 'gelf'], null, {ed, pre: S => { S.deck = S.deck.concat(S.hand[0]); S.deck.splice(S.deck.indexOf('fireball'), 1); S.hand[0] = ['fireball']; S.ready[0] = 0; S.pos = [5, 11]; }}); S = G.S;
+  assert(G.req.kind !== 'card' && S.hand[0].includes('fireball') && S.log.some(e => /no card they can play/.test(e.m)), 'the Action Phase is skipped: ' + G.req.prompt);
+  // Soda readies a Gem; a Gem tile does too (tile 5): the turn after, Fireball is playable again
+  assert.equal(E.checkState(S), null);
+}
 console.log('2nd Edition tests ok');

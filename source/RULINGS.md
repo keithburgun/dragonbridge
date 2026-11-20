@@ -14,7 +14,8 @@ Where a card or the manual leaves room, the game does the following. Change any 
 - Dragon Powers apply to both players.
 
 **Costs and bonuses**
-- "Deplete a Gem to …" on Fireball, Leap and Checkmate is optional.
+- Fireball’s Gem is its cost: playing it depletes a ready Gem and Bumps 5, with no question asked, and without a ready Gem it cannot be played at all (it shows dimmed in the hand). If no card in hand can be played, the Action Phase is skipped.
+- "Deplete a Gem to …" on Leap and Checkmate is optional.
 - A Bump is chosen by picking the tile the target lands on. Each direction offers the plain Bump and the Bump with all your optional bonuses from Items, Wizards and Dragon Powers; with Ruupart's Blade, also each of those with its extra +4. Turn-long Bump changes (Abragail, December, 2nd Edition Eve) are always applied.
 - "Away from center" is judged from where the bumped Wizard stands when the Bump starts.
 - Gale: the optional Teleport goes the way the opponent was actually pushed.

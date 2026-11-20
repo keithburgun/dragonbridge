@@ -14,7 +14,7 @@ function mirrorState(S0) {
   const s = clone(S0), fl = x => x === 0 || x === 1 ? 1 - x : x;
   for (const k of SEAT_KEYS) if (Array.isArray(s[k]) && s[k].length === 2) s[k].reverse();
   s.cur = fl(s.cur); s.first = fl(s.first); s.winner = fl(s.winner);
-  if (s.log) for (const e of s.log) { if (e.by != null) e.by = fl(e.by); if (e.p != null) e.p = fl(e.p); }
+  if (s.log) for (const e of s.log) { if (e.by != null) e.by = fl(e.by); if (e.p != null) e.p = fl(e.p); if (e.pw != null) e.pw = fl(e.pw); }
   return s;
 }
 /* Save the finished match (finish / onlFinish). Returns its id, or null if it was not recorded. */
@@ -131,7 +131,7 @@ function rpSync() {
 }
 function rpSeek(k) {
   const rp = M.rp; k = Math.max(0, Math.min(rp.n, k)); clearTimeout(rp.timer); rp.playing = false;
-  rp.real = rpRun(rp.r, k); rp.i = k; rp.done = false; M.busy = false; M.fresh = true; resetStage(); rpSync();
+  rp.real = rpRun(rp.r, k); rp.i = k; rp.done = false; M.busy = false; M.fresh = true; resetStage(); M.gemPrev = null; M.gemNew = []; rpSync();
   const L = M.G.S.log.filter(e => !/^—/.test(e.m)); $('#ticker').textContent = L.length ? L[L.length - 1].m : '';
   render();
 }
